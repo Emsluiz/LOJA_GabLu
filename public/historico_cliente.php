@@ -12,6 +12,7 @@ $faltamProdutos = 0;
 
 if ($clienteSelecionado) {
 
+
     /* Buscar pedidos do cliente */
     $sqlPedidos = "
         SELECT 
