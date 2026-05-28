@@ -198,7 +198,7 @@ if ($busca !== "") {
 </head>
 <body>
 
-    <!-- Menu Lateral de Navegação -->
+    <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
         <ul>
@@ -206,6 +206,7 @@ if ($busca !== "") {
             <li><a href="clientes.php">👥 Clientes</a></li>
             <li><a href="historico_cliente.php">📜 Histórico de Clientes</a></li>
             <li><a href="cadastrar_produto.php">📦 Cadastrar Produto</a></li>
+            <li><a href="visualizar_produtos.php">👁️ Visualizar Produtos</a></li>
             <li><a href="criar_pedido.php">🛒 Criar Pedido</a></li>
         </ul>
     </nav>
@@ -300,7 +301,8 @@ if ($busca !== "") {
                                     <a class="editar" href="?editar=<?= $cliente["id"] ?>">Editar</a>
 
                                     |
-                                    <a class="whatsapp" target="_blank" href="https://wa.me<?= preg_replace('/[^0-9]/', '', $cliente["telefone"]) ?>?text=Olá%20<?= urlencode($cliente["nome"]) ?>">WhatsApp</a>
+                                    <!-- Link do WhatsApp Blindado com Código de País (55) -->
+                                    <a class="whatsapp" target="_blank" href="https://whatsapp.com<?= preg_replace('/[^0-9]/', '', $cliente["telefone"]) ?>?text=Olá%20<?= urlencode($cliente["nome"]) ?>">WhatsApp</a>
                                     |
                                     <a class="excluir" href="?excluir=<?= $cliente["id"] ?>" onclick="return confirm('Tem certeza que deseja excluir este cliente?')">Excluir</a>
                                 </td>
