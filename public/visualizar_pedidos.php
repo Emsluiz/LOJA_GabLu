@@ -1,125 +1,97 @@
-<?php
-require_once __DIR__ . "/../config/database.php";
-require_once __DIR__ . "/../api/services/WhatsappService.php";
+    <!-- Menu Lateral de Navegação Unificado -->
+    <nav class="sidebar">
+        <h2>Gerenciamento</h2>
+        <ul>
+            <li><a href="http://localhost:8000/index.php">Início</a></li>
+            <li><a href="http://localhost:8000/public/clientes.php">Clientes</a></li>
+            <li><a href="http://localhost:8000/public/historico_cliente.php">Histórico de Clientes</a></li>
+            <li><a href="http://localhost:8000/public/cadastrar_produto.php">Cadastrar Produto</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
+            <li><a href="http://localhost:8000/public/cadastrar_status.php">Gerenciar Status</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+            <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
+        </ul>
+    </nav>
 
-$mensagem = "";
-$tipoMensagem = "sucesso";
+    <!-- Área de Conteúdo Principal -->
+    <main class="main-content">
+        <div class="header">
+            <h1>Registrar Vendas e Pedidos</h1>
+            <p>Abra uma nova encomenda no sistema vinculando o comprador aos bônus fidelidade.</p>
+        </div>
 
-# =====================================
-# ATUALIZAÇÃO DE STATUS E NOTIFICAÇÃO AUTOMÁTICA
-# =====================================
-if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
-    $pedido_id = (int)$_GET["alterar_status"];
-    $novo_status = trim($_GET["novo_status"]);
-    $filtro_atual = trim($_GET["filtro_status"] ?? "");
+        <?php if (!empty($msg)): ?>
+            <div class="mensagem" style="margin-bottom: 30px; <?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
+                <?= htmlspecialchars($msg) ?>
+            </div>
+        <?php endif; ?>
 
-    $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM status_pedido WHERE nome = ?");
-    $stmtCheck->execute([$novo_status]);
-    $statusExiste = (int)$stmtCheck->fetchColumn();
+        <?php if (!empty($msgBonus)): ?>
+            <div class="mensagem" style="margin-bottom: 30px;">
+                <?= htmlspecialchars($msgBonus) ?>
+            </div>
+        <?php endif; ?>
 
-    if ($pedido_id > 0 && $statusExiste > 0) {
-        try {
-            $pdo->beginTransaction();
+        <!-- Botão de Ação Direta para Disparo Nativo (Substituindo a dependência da API) -->
+        <?php if (!empty($linkWhatsFinal)): ?>
+            <div style="margin-bottom: 30px;">
+                <a href="<?= $linkWhatsFinal ?>" target="_blank" class="btn btn-success-whats">
+                    Enviar Notificação via WhatsApp Web
+                </a>
+            </div>
+        <?php endif; ?>
 
-            $stmtPedido = $pdo->prepare("SELECT cliente_id, status FROM pedidos WHERE id = ?");
-            $stmtPedido->execute([$pedido_id]);
-            $pedidoDados = $stmtPedido->fetch(PDO::FETCH_ASSOC);
+        <div class="card-panel">
+            <h3>Novo Pedido por Encomenda</h3>
+            
+            <form method="POST">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cliente_id">Cliente:</label>
+                        <select name="cliente_id" id="cliente_id" required>
+                            <option value="" disabled selected>Selecione um cliente</option>
+                            <?php foreach ($clientes as $c): ?>
+                                <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nome']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-            if ($pedidoDados) {
-                $cliente_id = (int)$pedidoDados["cliente_id"];
-                $statusAntigo = $pedidoDados["status"];
+                    <div class="form-group">
+                        <label for="produto_id">Produto:</label>
+                        <select name="produto_id" id="produto_id" required>
+                            <option value="" disabled selected>Selecione um produto</option>
+                            <?php foreach ($produtos as $p): ?>
+                                <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['nome']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
 
-                // Se o status mudou, buscamos os dados do cliente para notificar
-                if ($statusAntigo !== $novo_status) {
-                    
-                    $stmtCliente = $pdo->prepare("SELECT nome, telefone, saldo_itens FROM clientes WHERE id = ?");
-                    $stmtCliente->execute([$cliente_id]);
-                    $cliente = $stmtCliente->fetch(PDO::FETCH_ASSOC);
-                    $novoSaldo = (int)$cliente["saldo_itens"];
-                    $bonusGerados = 0;
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="quantidade">Quantidade:</label>
+                        <input type="number" name="quantidade" id="quantidade" placeholder="Ex: 2" min="1" required>
+                    </div>
 
-                    // Regra específica caso mude para Finalizado (Calcula Bônus)
-                    if ($novo_status === "Finalizado") {
-                        $stmtQtd = $pdo->prepare("SELECT SUM(quantidade) FROM pedido_itens WHERE pedido_id = ?");
-                        $stmtQtd->execute([$pedido_id]);
-                        $quantidadePedida = (int)$stmtQtd->fetchColumn();
+                    <div class="form-group">
+                        <label for="status">Situação Inicial:</label>
+                        <select name="status" id="status" required>
+                            <?php foreach ($statusDisponiveis as $nomeStatus): ?>
+                                <option value="<?= htmlspecialchars($nomeStatus) ?>" <?= $nomeStatus === 'Em Preparo' ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($nomeStatus) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
 
-                        $totalAgora = $novoSaldo + $quantidadePedida;
-                        $bonusGerados = intdiv($totalAgora, 10);
-                        $novoSaldo = $totalAgora % 10;
+                <button type="submit" class="btn btn-warning">Finalizar e Registrar Pedido</button>
+            </form>
+        </div>
+    </main>
 
-                        $stmtUpdateCliente = $pdo->prepare("UPDATE clientes SET saldo_itens = ? WHERE id = ?");
-                        $stmtUpdateCliente->execute([$novoSaldo, $cliente_id]);
-
-                        if ($bonusGerados > 0) {
-                            $stmtInsertBonus = $pdo->prepare("INSERT INTO bonus (cliente_id, descricao) VALUES (?, ?)");
-                            for ($i = 0; $i < $bonusGerados; $i++) {
-                                $stmtInsertBonus->execute([$cliente_id, "Bônus por completar 10 produtos comprados"]);
-                            }
-                        }
-                    }
-
-                    // Montagem do texto de notificação de alteração de status
-                    $textoWhats = "Olá " . $cliente["nome"] . "!\n\nA situação da sua encomenda de pudim mudou.\nNovo Status: " . $novo_status . "\nSaldo de fidelidade: " . $novoSaldo . " produtos.\n\n";
-                    
-                    if ($novo_status === "Finalizado" && $bonusGerados > 0) {
-                        $textoWhats .= "Parabéns! Você acumulou pontos e ganhou " . $bonusGerados . " bônus! 🎁\n";
-                    } elseif ($novo_status !== "Cancelado") {
-                        $faltam = 10 - $novoSaldo;
-                        $textoWhats .= "Faltam " . $faltam . " pudins para seu próximo prêmio grátis. 🎯\n";
-                    }
-                    $textoWhats .= "\nObrigado pela preferência!";
-
-                    // Disparo silencioso via Evolution API nos bastidores
-                    WhatsappService::enviar($cliente["telefone"], $textoWhats);
-                }
-            }
-
-            $sql = "UPDATE pedidos SET status = ? WHERE id = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$novo_status, $pedido_id]);
-
-            $pdo->commit();
-            header("Location: visualizar_pedidos.php?sucesso=atualizado&filtro_status=" . urlencode($filtro_atual));
-            exit;
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            header("Location: visualizar_pedidos.php?erro=sistema");
-            exit;
-        }
-    }
-}
-
-if (isset($_GET["sucesso"]) && $_GET["sucesso"] === "atualizado") {
-    $mensagem = "Situação da encomenda alterada e cliente notificado automaticamente.";
-    $tipoMensagem = "sucesso";
-} elseif (isset($_GET["erro"])) {
-    $tipoMensagem = "erro";
-    $mensagem = "Erro interno: Não foi possível processar a alteração no banco de dados.";
-}
-
-$filtroStatus = trim($_GET["filtro_status"] ?? "");
-$statusDisponiveis = $pdo->query("SELECT nome FROM status_pedido ORDER BY id ASC")->fetchAll(PDO::FETCH_COLUMN);
-
-$sqlPedidos = "
-    SELECT p.id AS pedido_id, p.data AS data_pedido, p.status AS status_pedido, c.nome AS nome_cliente, IFNULL(SUM(pi.quantidade), 0) AS total_produtos
-    FROM pedidos p
-    JOIN clientes c ON p.cliente_id = c.id
-    LEFT JOIN pedido_itens pi ON p.id = pi.pedido_id
-";
-if (!empty($filtroStatus)) {
-    $sqlPedidos .= " WHERE p.status = ? ";
-}
-$sqlPedidos .= " GROUP BY p.id ORDER BY p.id DESC ";
-
-$stmtPedidos = $pdo->prepare($sqlPedidos);
-if (!empty($filtroStatus)) {
-    $stmtPedidos->execute([$filtroStatus]);
-} else {
-    $stmtPedidos->execute();
-}
-$listaPedidos = $stmtPedidos->fetchAll(PDO::FETCH_ASSOC);
-?>
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -152,6 +124,8 @@ $listaPedidos = $stmtPedidos->fetchAll(PDO::FETCH_ASSOC);
         .btn { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: 0.3s; display: inline-block; text-decoration: none; text-align: center; }
         .btn-primary { background: #3498db; color: white; }
         .btn-primary:hover { background: #2980b9; }
+        .btn-success-whats { background: #2ecc71; color: white; width: 100%; text-decoration: none; margin-bottom: 20px; }
+        .btn-success-whats:hover { background: #27ae60; }
         
         .badge-status { font-weight: bold; padding: 6px 12px; border-radius: 4px; font-size: 13px; display: inline-block; background: #e0e0e0; color: #333; }
         .select-acao { padding: 6px; font-size: 13px; border: 1px solid #ced4da; border-radius: 4px; background-color: #fff; cursor: pointer; width: 100%; }
@@ -177,6 +151,7 @@ $listaPedidos = $stmtPedidos->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
 
+    <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
         <ul>
@@ -189,15 +164,29 @@ $listaPedidos = $stmtPedidos->fetchAll(PDO::FETCH_ASSOC);
             <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
         </ul>
-
-
     </nav>
 
+    <!-- Área de Conteúdo Principal -->
     <main class="main-content">
         <div class="header">
             <h1>Controle de Encomendas</h1>
-            <p>Monitore os pedidos de pudim e faça a gestão do fluxo de entrega de forma dinâmica.</p>
+            <p>Monitore os pedidos e faça a gestão do fluxo de entrega de forma dinâmica.</p>
         </div>
+
+        <?php if (!empty($mensagem)): ?>
+            <div class="mensagem" style="margin-bottom: 25px; <?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
+                <?= htmlspecialchars($mensagem) ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Botão Dinâmico para Notificação de Alteração de Status -->
+        <?php if (!empty($linkWhatsAltera)): ?>
+            <div style="margin-bottom: 30px;">
+                <a href="<?= $linkWhatsAltera ?>" target="_blank" class="btn btn-success-whats">
+                    Enviar Notificação de Alteração via WhatsApp Web
+                </a>
+            </div>
+        <?php endif; ?>
 
         <div class="card-panel">
             <h3>Situação das Encomendas</h3>
@@ -209,7 +198,7 @@ $listaPedidos = $stmtPedidos->fetchAll(PDO::FETCH_ASSOC);
                         <option value="">-- Todos os pedidos registrados --</option>
                         <?php foreach ($statusDisponiveis as $stNome): ?>
                             <option value="<?= htmlspecialchars($stNome) ?>" <?= $filtroStatus === $stNome ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($stNome) ?>
+                                <?= htmlspecialchars($stNome) ?>"
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -217,19 +206,13 @@ $listaPedidos = $stmtPedidos->fetchAll(PDO::FETCH_ASSOC);
                 <button type="submit" class="btn btn-primary">Filtrar</button>
             </form>
 
-            <?php if (!empty($mensagem)): ?>
-                <div class="mensagem" style="margin-bottom: 25px; <?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
-                    <?= htmlspecialchars($mensagem) ?>
-                </div>
-            <?php endif; ?>
-
             <table>
                 <thead>
                     <tr>
                         <th width="10%">Pedido</th>
                         <th width="25%">Cliente / Comprador</th>
                         <th width="20%">Data do Pedido</th>
-                        <th width="12%">Qtd. Pudins</th>
+                        <th width="12%">Qtd. Itens</th>
                         <th width="15%">Situação Atual</th>
                         <th width="18%">Alterar Situação</th>
                     </tr>

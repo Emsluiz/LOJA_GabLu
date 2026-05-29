@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . "/../config/database.php";
-require_once __DIR__ . "/../api/services/WhatsappService.php";
 
 $clientes = $pdo->query("SELECT id, nome, telefone FROM clientes ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
 $produtos = $pdo->query("SELECT id, nome FROM produtos ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -9,6 +8,7 @@ $statusDisponiveis = $pdo->query("SELECT nome FROM status_pedido ORDER BY id ASC
 $msg = "";
 $msgBonus = "";
 $tipoMensagem = "sucesso";
+$linkWhatsFinal = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $cliente_id = (int)($_POST["cliente_id"] ?? 0);
@@ -61,21 +61,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $stmt = $pdo->prepare("SELECT nome, telefone FROM clientes WHERE id = ?");
             $stmt->execute([$cliente_id]);
             $cliente = $stmt->fetch(PDO::FETCH_ASSOC);
+            $telefoneLimpo = preg_replace('/[^0-9]/', '', $cliente["telefone"]);
 
             $faltam = 10 - $novoSaldo;
-            $mensagem = "Olá " . $cliente["nome"] . "!\n\nSeu pedido de pudim foi registrado!\nSituação Atual: " . $status_inicial . "\nQuantidade: " . $platinum . " un.\nSaldo atual: " . $novoSaldo . " produtos.\n\n";
+            $mensagemTxt = "Olá " . $cliente["nome"] . "!\n\nSeu pedido foi registrado!\nSituação Atual: " . $status_inicial . "\nQuantidade: " . $quantidade . " un.\nSaldo atual: " . $novoSaldo . " produtos.\n\n";
 
             if ($status_inicial === "Finalizado" && $bonusGerados > 0) {
-                $mensagem .= "Parabéns! Você ganhou " . $bonusGerados . " bônus!\n";
+                $mensagemTxt .= "Parabéns! Você ganhou " . $bonusGerados . " bônus!\n";
             } elseif ($status_inicial !== "Cancelado") {
-                $mensagem .= "Faltam apenas " . $faltam . " produtos para ganhar seu próximo bônus.\n";
+                $mensagemTxt .= "Faltam apenas " . $faltam . " produtos para ganhar seu próximo bônus.\n";
             }
-            $mensagem .= "\nObrigado pela preferência!";
+            $mensagemTxt .= "\nObrigado pela preferência!";
 
-            WhatsappService::enviar($cliente["telefone"], $mensagem);
-
-            header("Location: criar_pedido.php?sucesso=cadastrado");
-            exit;
+            // Geração do link direto e infalível com a barra corrigida
+            $linkWhatsFinal = "https://wa.me" . $telefoneLimpo . "?text=" . urlencode($mensagemTxt);
+            $msg = "Pedido gravado com sucesso no sistema.";
 
         } catch (Exception $e) {
             $pdo->rollBack();
@@ -83,11 +83,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $tipoMensagem = "erro";
         }
     }
-}
-
-if (isset($_GET["sucesso"]) && $_GET["sucesso"] === "cadastrado") {
-    $msg = "Pedido cadastrado e notificação enviada com sucesso.";
-    $tipoMensagem = "sucesso";
 }
 ?>
 <!DOCTYPE html>
@@ -118,6 +113,8 @@ if (isset($_GET["sucesso"]) && $_GET["sucesso"] === "cadastrado") {
         .btn { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: 0.3s; display: inline-block; text-decoration: none; text-align: center; }
         .btn-warning { background: #e67e22; color: white; width: 100%; }
         .btn-warning:hover { background: #d35400; }
+        .btn-success-whats { background: #2ecc71; color: white; width: 100%; text-decoration: none; margin-top: 20px; }
+        .btn-success-whats:hover { background: #27ae60; }
         .mensagem { padding: 15px; border-radius: 5px; margin-bottom: 25px; border-left: 5px solid #2ecc71; font-weight: 500; background: #d4edda; color: #155724; }
         @media (max-width: 768px) {
             body { flex-direction: column; }
@@ -158,6 +155,15 @@ if (isset($_GET["sucesso"]) && $_GET["sucesso"] === "cadastrado") {
         <?php if (!empty($msgBonus)): ?>
             <div class="mensagem" style="margin-bottom: 30px;">
                 <?= htmlspecialchars($msgBonus) ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Botão de Ação Direta para Disparo Nativo (Substituindo a dependência da API) -->
+        <?php if (!empty($linkWhatsFinal)): ?>
+            <div style="margin-bottom: 30px;">
+                <a href="<?= $linkWhatsFinal ?>" target="_blank" class="btn btn-success-whats">
+                    Enviar Notificação via WhatsApp Web
+                </a>
             </div>
         <?php endif; ?>
 

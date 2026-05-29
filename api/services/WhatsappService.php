@@ -3,8 +3,8 @@
 class WhatsappService {
     public static function enviar($telefone, $mensagem) {
         $evolution_url = "http://localhost:8080"; 
-        $instance_name = "SuaInstancia";          
-        $apikey        = "SuaApiKeyAqui";         
+        $instance_name = "InstanciaPudim"; // Use o mesmo nome que criou no manager
+        $apikey        = "LojaPudimFidelidade2026Token"; // Sua chave do .env
 
         $url_envio = $evolution_url . "/message/sendText/" . $instance_name;
         
@@ -24,7 +24,6 @@ class WhatsappService {
             "apikey: " . $apikey
         ]);
 
-        // Executa sem travar o sistema caso o servidor do whats esteja offline
         curl_setopt($ch, CURLOPT_TIMEOUT, 5); 
         
         $response = curl_exec($ch);
