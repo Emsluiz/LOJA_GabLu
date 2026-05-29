@@ -1,5 +1,4 @@
 <?php
-
 require_once __DIR__ . "/../config/database.php";
 
 $mensagem = "";
@@ -21,17 +20,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["salvar_edicao"])) {
     if ($id > 0 && $nome && $telefone && $cidade) {
         $sql = "    
             UPDATE clientes
-            SET
-                nome = ?,
-                telefone = ?,
-                cidade = ?,
-                cep = ?,
-                rua = ?,
-                numero = ?,
-                bairro = ?
+            SET nome = ?, telefone = ?, cidade = ?, cep = ?, rua = ?, numero = ?, bairro = ?
             WHERE id = ?
         ";
-
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$nome, $telefone, $cidade, $cep, $rua, $numero, $bairro, $id]);
 
@@ -41,7 +32,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["salvar_edicao"])) {
 }
 
 # =====================================
-# CADASTRAR CLIENTE (Com validação de duplicidade)
+# CADASTRAR CLIENTE
 # =====================================
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["cadastrar"])) {
     $nome = trim($_POST["nome"] ?? "");
@@ -77,35 +68,39 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["cadastrar"])) {
 if (isset($_GET["excluir"])) {
     $id = (int) $_GET["excluir"];
     if ($id > 0) {
-        $sql = "DELETE FROM clientes WHERE id = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$id]);
+        try {
+            $sql = "DELETE FROM clientes WHERE id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$id]);
+            
+            header("Location: clientes.php?sucesso=excluido");
+            exit;
+        } catch (PDOException $e) {
+            if ($e->getCode() == '23000') {
+                header("Location: clientes.php?erro=possui_pedidos");
+                exit;
+            } else {
+                header("Location: clientes.php?erro=sistema");
+                exit;
+            }
+        }
     }
-    header("Location: clientes.php?sucesso=excluido");
-    exit;
 }
 
 # =====================================
 # MENSAGENS
 # =====================================
 if (isset($_GET["sucesso"])) {
-    if ($_GET["sucesso"] === "cadastrado") {
-        $mensagem = "Cliente cadastrado com sucesso!";
-    } elseif ($_GET["sucesso"] === "editado") {
-        $mensagem = "Cliente atualizado com sucesso!";
-    } elseif ($_GET["sucesso"] === "excluido") {
-        $mensagem = "Cliente excluído com sucesso!";
-    }
+    if ($_GET["sucesso"] === "cadastrado") $mensagem = "Cliente cadastrado com sucesso.";
+    if ($_GET["sucesso"] === "editado") $mensagem = "Cliente atualizado com sucesso.";
+    if ($_GET["sucesso"] === "excluido") $mensagem = "Cliente excluido com sucesso.";
 } elseif (isset($_GET["erro"])) {
     $tipoMensagem = "erro";
-    if ($_GET["erro"] === "duplicado") {
-        $mensagem = "Atenção: Já existe um cliente cadastrado com este número de telefone!";
-    }
+    if ($_GET["erro"] === "duplicado") $mensagem = "Atencao: Ja existe um cliente cadastrado com este numero de telefone.";
+    if ($_GET["erro"] === "possui_pedidos") $mensagem = "Atencao: Nao e possivel excluir este cliente porque ele possui pedidos vinculados.";
+    if ($_GET["erro"] === "sistema") $mensagem = "Erro interno ao processar a exclusao.";
 }
 
-# =====================================
-# BUSCAR CLIENTE PARA EDIÇÃO
-# =====================================
 $clienteEditar = null;
 if (isset($_GET["editar"])) {
     $id = (int) $_GET["editar"];
@@ -122,16 +117,7 @@ if (isset($_GET["editar"])) {
 # =====================================
 $busca = trim($_GET["buscar"] ?? "");
 if ($busca !== "") {
-    $sql = "
-        SELECT *
-        FROM clientes
-        WHERE
-            nome LIKE ?
-            OR telefone LIKE ?
-            OR cidade LIKE ?
-            OR bairro LIKE ?
-        ORDER BY id DESC
-    ";
+    $sql = "SELECT * FROM clientes WHERE nome LIKE ? OR telefone LIKE ? OR cidade LIKE ? OR bairro LIKE ? ORDER BY id DESC";
     $stmt = $pdo->prepare($sql);
     $pesquisa = "%{$busca}%";
     $stmt->execute([$pesquisa, $pesquisa, $pesquisa, $pesquisa]);
@@ -163,52 +149,44 @@ if ($busca !== "") {
         .card-panel h3 { color: #2c3e50; margin-bottom: 20px; font-size: 20px; border-left: 4px solid #3498db; padding-left: 10px; }
         .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
         input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 15px; transition: 0.2s; }
-        input:focus { border-color: #3498db; outline: none; box-shadow: 0 0 5px rgba(52, 152, 219, 0.3); }
         .btn { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: 0.3s; display: inline-block; text-decoration: none; text-align: center; }
         .btn-primary { background: #3498db; color: white; }
-        .btn-primary:hover { background: #2980b9; }
         .btn-success { background: #2ecc71; color: white; }
-        .btn-success:hover { background: #27ae60; }
         .btn-secondary { background: #95a5a6; color: white; }
-        .btn-secondary:hover { background: #7f8c8d; }
         .btn-search { background: #34495e; color: white; padding: 12px 20px; margin-left: 10px; }
-        .btn-search:hover { background: #2c3e50; }
         .busca-container { display: flex; margin-bottom: 25px; }
         .busca-container input { flex: 1; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
         table th, table td { padding: 14px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 15px; }
         table th { background: #f8f9fa; color: #34495e; font-weight: 600; }
-        table tr:hover { background-color: #fcfcfc; }
         .actions-links a { text-decoration: none; font-weight: 600; font-size: 14px; padding: 4px 8px; border-radius: 4px; transition: 0.2s; }
         .actions-links .editar { color: #3498db; }
-        .actions-links .editar:hover { background: rgba(52,152,219,0.1); }
         .actions-links .whatsapp { color: #2ecc71; }
-        .actions-links .whatsapp:hover { background: rgba(46,204,113,0.1); }
         .actions-links .excluir { color: #e74c3c; }
-        .actions-links .excluir:hover { background: rgba(231,76,60,0.1); }
-        .mensagem { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin-bottom: 25px; border-left: 5px solid #2ecc71; font-weight: 500; }
+        .mensagem { padding: 15px; border-radius: 5px; margin-bottom: 25px; border-left: 5px solid #2ecc71; font-weight: 500; background: #d4edda; color: #155724; }
         .sem-clientes { text-align: center; padding: 30px; color: #7f8c8d; font-style: italic; }
         @media (max-width: 768px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; height: auto; position: relative; }
             .main-content { margin-left: 0; width: 100%; padding: 20px; }
-
         }
     </style>
 </head>
 <body>
-
     <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
-        <ul>
-            <li><a href="/">🏠 Início</a></li>
-            <li><a href="clientes.php">👥 Clientes</a></li>
-            <li><a href="historico_cliente.php">📜 Histórico de Clientes</a></li>
-            <li><a href="cadastrar_produto.php">📦 Cadastrar Produto</a></li>
-            <li><a href="visualizar_produtos.php">👁️ Visualizar Produtos</a></li>
-            <li><a href="criar_pedido.php">🛒 Criar Pedido</a></li>
+                <ul>
+            <li><a href="http://localhost:8000/index.php">Início</a></li>
+            <li><a href="http://localhost:8000/public/clientes.php">Clientes</a></li>
+            <li><a href="http://localhost:8000/public/historico_cliente.php">Histórico de Clientes</a></li>
+            <li><a href="http://localhost:8000/public/cadastrar_produto.php">Cadastrar Produto</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
+            <li><a href="http://localhost:8000/public/cadastrar_status.php">Gerenciar Status</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+            <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
         </ul>
+
     </nav>
 
     <!-- Conteúdo da Página -->
@@ -218,15 +196,9 @@ if ($busca !== "") {
             <p>Consulte, cadastre e altere os dados dos clientes da loja.</p>
         </div>
 
-        <?php if ($mensagem): ?>
-            <div class="mensagem" style="<?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
-                <?= htmlspecialchars($mensagem) ?>
-            </div>
-        <?php endif; ?>
-
         <!-- Bloco do Formulário (Cadastro ou Edição) -->
         <div class="card-panel">
-            <h3><?= $clienteEditar ? "📝 Editar Dados do Cliente" : "➕ Cadastrar Novo Cliente" ?></h3>
+            <h3><?= $clienteEditar ? "Editar Dados do Cliente" : "Cadastrar Novo Cliente" ?></h3>
             
             <form method="POST">
                 <?php if ($clienteEditar): ?>
@@ -239,7 +211,6 @@ if ($busca !== "") {
                     <input type="text" name="cidade" placeholder="Cidade" required value="<?= htmlspecialchars($clienteEditar["cidade"] ?? "") ?>">
                 </div>
 
-                <!-- Linha do Endereço (Preenchimento manual) -->
                 <div class="form-row">
                     <input type="text" name="cep" placeholder="CEP" maxlength="9" value="<?= htmlspecialchars($clienteEditar["cep"] ?? "") ?>">
                     <input type="text" name="rua" placeholder="Rua / Logradouro" value="<?= htmlspecialchars($clienteEditar["rua"] ?? "") ?>">
@@ -249,22 +220,29 @@ if ($busca !== "") {
 
                 <?php if ($clienteEditar): ?>
                     <button type="submit" name="salvar_edicao" class="btn btn-success">Salvar Alterações</button>
-                    <a href="clientes.php" class="btn btn-secondary" style="margin-left: 5px; text-decoration: none;">Cancelar Edição</a>
+                    <a href="clientes.php" class="btn btn-secondary">Cancelar Edição</a>
                 <?php else: ?>
                     <button type="submit" name="cadastrar" class="btn btn-primary">Cadastrar Cliente</button>
                 <?php endif; ?>
             </form>
         </div>
 
+        <!-- Alerta de Feedback Posicionado no Vão Central -->
+        <?php if (!empty($mensagem)): ?>
+            <div class="mensagem" style="margin-bottom: 30px; <?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
+                <?= htmlspecialchars($mensagem) ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Bloco de Listagem e Busca -->
         <div class="card-panel">
-            <h3>👥 Lista de Clientes Ativos</h3>
+            <h3>Lista de Clientes Ativos</h3>
             
             <form method="GET" class="busca-container">
-                <input type="text" name="buscar" placeholder="🔍 Buscar por nome, telefone, cidade ou bairro..." value="<?= htmlspecialchars($_GET["buscar"] ?? "") ?>">
+                <input type="text" name="buscar" placeholder="Buscar por nome, telefone, cidade ou bairro..." value="<?= htmlspecialchars($_GET["buscar"] ?? "") ?>">
                 <button type="submit" class="btn btn-search">Buscar</button>
                 <?php if ($busca !== ""): ?>
-                    <a href="clientes.php" class="btn btn-secondary" style="margin-left: 5px; padding: 12px 15px; text-decoration: none;">Limpar</a>
+                    <a href="clientes.php" class="btn btn-secondary" style="margin-left: 5px; padding: 12px 15px;">Limpar</a>
                 <?php endif; ?>
             </form>
 
@@ -301,8 +279,7 @@ if ($busca !== "") {
                                     <a class="editar" href="?editar=<?= $cliente["id"] ?>">Editar</a>
 
                                     |
-                                    <!-- Link do WhatsApp Blindado com Código de País (55) -->
-                                    <a class="whatsapp" target="_blank" href="https://whatsapp.com<?= preg_replace('/[^0-9]/', '', $cliente["telefone"]) ?>?text=Olá%20<?= urlencode($cliente["nome"]) ?>">WhatsApp</a>
+                                    <a class="whatsapp" target="_blank" href="https://wa.me<?= preg_replace('/[^0-9]/', '', $cliente["telefone"]) ?>?text=Olá%20<?= urlencode($cliente["nome"]) ?>">WhatsApp</a>
                                     |
                                     <a class="excluir" href="?excluir=<?= $cliente["id"] ?>" onclick="return confirm('Tem certeza que deseja excluir este cliente?')">Excluir</a>
                                 </td>
@@ -317,5 +294,6 @@ if ($busca !== "") {
             </table>
         </div>
     </main>
+
 </body>
 </html>

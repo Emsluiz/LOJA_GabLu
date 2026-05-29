@@ -23,7 +23,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $tipoMensagem = "erro";
             $mensagem = "Atenção: Já existe um produto cadastrado com este nome!";
         } else {
-            // Se não existir, realiza o cadastro normalmente
+            // Se não existir, realiza o cadastro normalmente no catálogo [RF2]
             $sql = "INSERT INTO produtos (nome, preco) VALUES (?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$nome, $preco]);
@@ -65,16 +65,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .form-group { display: flex; flex-direction: column; }
         label { margin-bottom: 8px; font-weight: 600; color: #34495e; font-size: 15px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 15px; transition: 0.2s; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 15px; background: white; transition: 0.2s; }
         input:focus { border-color: #2ecc71; outline: none; box-shadow: 0 0 5px rgba(46, 204, 113, 0.3); }
         
         /* Botões */
         .btn { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: 0.3s; display: inline-block; text-decoration: none; text-align: center; }
-        .btn-success { background: #2ecc71; color: white; }
+        .btn-success { background: #2ecc71; color: white; width: 100%; }
         .btn-success:hover { background: #27ae60; }
         
-        /* Alertas */
-        .mensagem { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin-bottom: 25px; border-left: 5px solid #2ecc71; font-weight: 500; }
+        /* Alertas no vão central */
+        .mensagem { padding: 15px; border-radius: 5px; margin-bottom: 25px; border-left: 5px solid #2ecc71; font-weight: 500; background: #d4edda; color: #155724; }
 
         @media (max-width: 768px) {
             body { flex-direction: column; }
@@ -86,28 +86,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <body>
 
     <!-- Menu Lateral de Navegação Unificado -->
-   <nav class="sidebar">
+    <nav class="sidebar">
         <h2>Gerenciamento</h2>
         <ul>
-            <li><a href="/">🏠 Início</a></li>
-            <li><a href="clientes.php">👥 Clientes</a></li>
-            <li><a href="historico_cliente.php">📜 Histórico de Clientes</a></li>
-            <li><a href="cadastrar_produto.php">📦 Cadastrar Produto</a></li>
-            <li><a href="visualizar_produtos.php">👁️ Visualizar Produtos</a></li>
-            <li><a href="criar_pedido.php">🛒 Criar Pedido</a></li>
+            <li><a href="http://localhost:8000/index.php">Início</a></li>
+            <li><a href="http://localhost:8000/public/clientes.php">Clientes</a></li>
+            <li><a href="http://localhost:8000/public/historico_cliente.php">Histórico de Clientes</a></li>
+            <li><a href="http://localhost:8000/public/cadastrar_produto.php">Cadastrar Produto</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
+            <li><a href="http://localhost:8000/public/cadastrar_status.php">Gerenciar Status</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+            <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
         </ul>
+
+
     </nav>
 
     <!-- Área de Conteúdo Principal -->
     <main class="main-content">
         <div class="header">
-            <h1>Controle de Estoque e Produtos</h1>
-            <p>Cadastre novos itens para disponibilizá-los no módulo de vendas do sistema.</p>
+            <h1>Controle de Produtos (RF2)</h1>
+            <p>Cadastre novos itens e sabores para disponibilizá-los no módulo de vendas do sistema.</p>
         </div>
 
-        <!-- Exibição de Alertas Estilizados -->
-        <?php if ($mensagem): ?>
-            <div class="mensagem" style="<?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
+        <!-- Exibição de Alertas Estilizados Movido para o Vão Central -->
+        <?php if (!empty($mensagem)): ?>
+            <div class="mensagem" style="margin-bottom: 30px; <?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
                 <?= htmlspecialchars($mensagem) ?>
             </div>
         <?php endif; ?>
@@ -120,7 +124,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <div class="form-row">
                     <div class="form-group">
                         <label for="nome">Nome do Produto:</label>
-                        <input type="text" name="nome" id="nome" placeholder="Ex: Pudim de Leite" required>
+                        <input type="text" name="nome" id="nome" placeholder="Ex: Pudim de Leite Moça" required>
                     </div>
 
                     <div class="form-group">

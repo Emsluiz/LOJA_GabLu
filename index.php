@@ -31,9 +31,15 @@
         /* Botões de Ação */
         .btn-nav { display: inline-block; background-color: #3498db; color: white; text-decoration: none; padding: 8px 15px; border-radius: 4px; font-size: 14px; transition: background 0.2s; }
         .btn-nav:hover { background-color: #2980b9; }
+        
         .card.produtos { border-left-color: #2ecc71; }
         .card.produtos .btn-nav { background-color: #2ecc71; }
         .card.produtos .btn-nav:hover { background-color: #27ae60; }
+        
+        .card.visualizar-pedidos { border-left-color: #9b59b6; }
+        .card.visualizar-pedidos .btn-nav { background-color: #9b59b6; }
+        .card.visualizar-pedidos .btn-nav:hover { background-color: #8e44ad; }
+        
         .card.pedidos { border-left-color: #e67e22; }
         .card.pedidos .btn-nav { background-color: #e67e22; }
         .card.pedidos .btn-nav:hover { background-color: #d35400; }
@@ -41,15 +47,18 @@
 </head>
 <body>
 
-    <!-- Menu Lateral de Navegação -->
+    <!-- Menu Lateral de Navegação Unificado para a Raiz -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
         <ul>
-            <li><a href="public/index.php">🏠 Início</a></li>
-            <li><a href="public/clientes.php">👥 Clientes</a></li>
-            <li><a href="public/historico_cliente.php">📜 Histórico de Clientes</a></li>
-            <li><a href="public/cadastrar_produto.php">📦 Cadastrar Produto</a></li>
-            <li><a href="public/criar_pedido.php">🛒 Criar Pedido</a></li>
+            <li><a href="index.php">Início</a></li>
+            <li><a href="public/clientes.php">Clientes</a></li>
+            <li><a href="public/historico_cliente.php">Histórico de Clientes</a></li>
+            <li><a href="public/cadastrar_produto.php">Cadastrar Produto</a></li>
+            <li><a href="public/visualizar_produtos.php">Visualizar Produtos</a></li>
+            <li><a href="public/cadastrar_status.php">Gerenciar Status</a></li>
+            <li><a href="public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+            <li><a href="public/criar_pedido.php">Criar Pedido</a></li>
         </ul>
     </nav>
 
@@ -57,7 +66,7 @@
     <main class="main-content">
         <div class="header">
             <h1>Painel Principal</h1>
-            <p>Seja bem-vindo ao sistema de controle da Loja.</p>
+            <p>Seja bem-vindo ao sistema de controle e encomendas da Loja de Pudins.</p>
         </div>
 
         <!-- Cards com Botões de Navegação Direta -->
@@ -71,14 +80,20 @@
 
             <div class="card produtos">
                 <h3>Produtos</h3>
-                <p>Novos Itens</p>
-                <a href="public/cadastrar_produto.php" class="btn-nav">Cadastrar Produto</a>
+                <p>Catálogo Geral</p>
+                <a href="public/visualizar_produtos.php" class="btn-nav">Ver Produtos</a>
+            </div>
+
+            <div class="card visualizar-pedidos">
+                <h3>Encomendas</h3>
+                <p>Fluxo de Status</p>
+                <a href="public/visualizar_pedidos.php" class="btn-nav">Gerenciar Entregas</a>
             </div>
 
             <div class="card pedidos">
-                <h3>Vendas / Pedidos</h3>
-                <p>Gerenciar Caixa</p>
-                <a href="public/criar_pedido.php" class="btn-nav">Abrir Novo Pedido</a>
+                <h3>Vendas / Caixa</h3>
+                <p>Novo Pedido</p>
+                <a href="public/criar_pedido.php" class="btn-nav">Abrir Nova Encomenda</a>
             </div>
 
         </div>
