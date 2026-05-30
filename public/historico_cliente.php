@@ -8,6 +8,7 @@ $tipoMensagem = "sucesso";
 $clientes = $pdo->query("SELECT id, nome FROM clientes ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $clienteSelecionado = $_GET['cliente_id'] ?? null;
+$termoBusca = trim($_GET['buscar'] ?? '');
 $pedidos = [];
 $bonus = [];
 $totalProdutos = 0;
@@ -47,22 +48,40 @@ if (isset($_GET["sucesso"]) && $_GET["sucesso"] === "resgatado") {
 }
 
 # =====================================
-# BUSCA DE HISTÓRICO CONSOLIDADO
+# BUSCA DE HISTÓRICO CONSOLIDADO (GERAL OU FILTRADO)
 # =====================================
+
+// Query principal adaptada para buscar todas as vendas do sistema por padrão
+$sqlPedidos = "
+    SELECT p.id AS pedido_id, p.data AS data_pedido, SUM(pi.quantidade) AS total_produtos, c.nome AS nome_cliente, p.cliente_id
+    FROM pedidos p
+    JOIN pedido_itens pi ON pi.pedido_id = p.id
+    JOIN clientes c ON p.cliente_id = c.id
+    WHERE 1=1
+";
+
+$paramsPedidos = [];
+
 if ($clienteSelecionado) {
+    $sqlPedidos .= " AND p.cliente_id = ? ";
+    $paramsPedidos[] = $clienteSelecionado;
+}
 
-    /* Buscar pedidos do cliente (Incluindo a data real da encomenda) */
-    $sqlPedidos = "
-        SELECT p.id AS pedido_id, p.data AS data_pedido, SUM(pi.quantidade) AS total_produtos
-        FROM pedidos p
-        JOIN pedido_itens pi ON pi.pedido_id = p.id
-        WHERE p.cliente_id = ?
-        GROUP BY p.id ORDER BY p.id DESC
-    ";
-    $stmtPedidos = $pdo->prepare($sqlPedidos);
-    $stmtPedidos->execute([$clienteSelecionado]);
-    $pedidos = $stmtPedidos->fetchAll(PDO::FETCH_ASSOC);
+if ($termoBusca !== "") {
+    $sqlPedidos .= " AND (c.nome LIKE ? OR p.id = ?) ";
+    $paramsPedidos[] = "%" . $termoBusca . "%";
+    $paramsPedidos[] = (int)$termoBusca;
+}
 
+$sqlPedidos .= " GROUP BY p.id ORDER BY p.id DESC";
+
+$stmtPedidos = $pdo->prepare($sqlPedidos);
+$stmtPedidos->execute($paramsPedidos);
+$pedidos = $stmtPedidos->fetchAll(PDO::FETCH_ASSOC);
+
+
+// Busca informações de bônus e progresso se um comprador específico for selecionado
+if ($clienteSelecionado) {
     /* Calcular total de produtos comprados */
     $sqlTotalProdutos = "
         SELECT SUM(pi.quantidade) AS total
@@ -72,10 +91,8 @@ if ($clienteSelecionado) {
     ";
     $stmtTotal = $pdo->prepare($sqlTotalProdutos);
     $stmtTotal->execute([$clienteSelecionado]);
-    $totalProdutos = (int)$stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
-
-    /* Calcula bônus esperados acumulados por histórico */
-    $bonusEsperados = intdiv($totalProdutos, 10);
+    $resTotal = $stmtTotal->fetch(PDO::FETCH_ASSOC);
+    $totalProdutos = (int)($resTotal['total'] ?? 0);
 
     /* Buscar bônus ainda ativos/disponíveis para resgate */
     $sqlBonus = "SELECT id, descricao, data FROM bonus WHERE cliente_id = ? ORDER BY data DESC";
@@ -93,7 +110,7 @@ if ($clienteSelecionado) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Histórico de Clientes - Sistema Loja</title>
+    <title>Histórico de Vendas Geral - Sistema Loja</title>
     <style>
         /* CSS Unificado do Painel */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -118,15 +135,18 @@ if ($clienteSelecionado) {
         .card-panel.detalhes-bloco h3 { border-left-color: #e67e22; }
         
         /* Formulários e Seleção */
-        .busca-container { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-end; }
-        .form-group { display: flex; flex-direction: column; flex: 1; }
+        .busca-container { display: flex; gap: 15px; margin-bottom: 10px; align-items: flex-end; flex-wrap: wrap; }
+        .form-group { display: flex; flex-direction: column; flex: 1; min-width: 200px; }
         label { margin-bottom: 8px; font-weight: 600; color: #34495e; font-size: 15px; }
-        select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 15px; background: white; transition: 0.2s; }
+        select, input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 15px; background: white; transition: 0.2s; }
+        select:focus, input[type="text"]:focus { border-color: #3498db; outline: none; }
         
         /* Botões */
         .btn { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: 0.3s; display: inline-block; text-decoration: none; text-align: center; }
         .btn-primary { background: #3498db; color: white; }
         .btn-primary:hover { background: #2980b9; }
+        .btn-secondary { background: #95a5a6; color: white; text-decoration: none; }
+        .btn-secondary:hover { background: #7f8c8d; }
         .btn-resgate { background: #2ecc71; color: white; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: bold; float: right; margin-top: -5px; }
         .btn-resgate:hover { background: #27ae60; }
         
@@ -140,7 +160,7 @@ if ($clienteSelecionado) {
         .info-box { background: #e6fffa; color: #006d5b; padding: 15px; border-radius: 6px; margin-bottom: 25px; border-left: 5px solid #2ecc71; font-weight: 600; font-size: 16px; }
         .bonus-box { background: #fff7ed; color: #c2410c; padding: 15px; border-radius: 6px; margin-bottom: 15px; border-left: 5px solid #f97316; font-size: 15px; overflow: hidden; }
         .bonus-box small { color: #7c2d12; display: block; margin-top: 4px; font-weight: 500; }
-        .sem-dados { color: #7f8c8d; font-style: italic; margin-top: 10px; }
+        .sem-dados { color: #7f8c8d; font-style: italic; margin-top: 10px; text-align: center; padding: 20px 0; }
         .mensagem { padding: 15px; border-radius: 5px; margin-bottom: 25px; border-left: 5px solid #2ecc71; font-weight: 500; background: #d4edda; color: #155724; }
 
         @media (max-width: 768px) {
@@ -152,35 +172,43 @@ if ($clienteSelecionado) {
 </head>
 <body>
 
+    <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
-        <ul>
-            <li><a href="http://localhost:8000/index.php">Início</a></li>
-            <li><a href="http://localhost:8000/public/clientes.php">Clientes</a></li>
-            <li><a href="http://localhost:8000/public/historico_cliente.php">Histórico de Clientes</a></li>
+  <ul>
+            <!-- Modulo de Clientes -->
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Clientes</li>
+            <li><a href="http://localhost:8000/public/clientes.php">Gerenciar Clientes</a></li>
+            <li><a href="http://localhost:8000/public/historico_cliente.php">Historico de Clientes</a></li>
+            
+            <!-- Modulo de Produtos -->
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Produtos</li>
             <li><a href="http://localhost:8000/public/cadastrar_produto.php">Cadastrar Produto</a></li>
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
-            <li><a href="http://localhost:8000/public/cadastrar_status.php">Gerenciar Status</a></li>
-            <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+            
+            <!-- Modulo de Pedidos e Vendas -->
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Vendas e Configuracoes</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
         </ul>
 
     </nav>
-
+    <!-- Area de Conteudo Principal -->
     <main class="main-content">
         <div class="header">
-            <h1>Histórico do Cliente</h1>
-            <p>Consulte o relatório consolidado de encomendas realizadas e gerencie as bonificações ativas.</p>
+            <h1>Historico de Vendas Geral</h1>
+            <p>Consulte o relatorio consolidado de todas as encomendas realizadas e filtre os resultados por cliente ou palavra-chave.</p>
         </div>
-        <!-- Painel de Seleção do Cliente -->
+
+        <!-- Painel de Selecao e Busca Avancada -->
         <div class="card-panel">
-            <h3>🔍 Filtrar por Comprador</h3>
+            <h3>Pesquisa e Filtros</h3>
             <form method="GET">
                 <div class="busca-container">
                     <div class="form-group">
-                        <label for="cliente_id">Selecione o Cliente da Encomenda:</label>
-                        <select name="cliente_id" id="cliente_id" required>
-                            <option value="">-- Escolha um cliente listado --</option>
+                        <label for="cliente_id">Filtrar por Cliente:</label>
+                        <select name="cliente_id" id="cliente_id">
+                            <option value="">-- Todos os clientes --</option>
                             <?php foreach ($clientes as $c): ?>
                                 <option value="<?= $c['id'] ?>" <?= ($clienteSelecionado == $c['id']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($c['nome']) ?>
@@ -188,85 +216,96 @@ if ($clienteSelecionado) {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-primary">Ver Histórico</button>
+
+                    <div class="form-group">
+                        <label for="buscar">Buscar por Nome ou Codigo:</label>
+                        <input type="text" name="buscar" id="buscar" placeholder="Digite o nome do cliente ou ID do pedido..." value="<?= htmlspecialchars($termoBusca) ?>">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <?php if ($clienteSelecionado || $termoBusca !== ""): ?>
+                        <a href="historico_cliente.php" class="btn btn-secondary">Limpar</a>
+                    <?php endif; ?>
                 </div>
             </form>
         </div>
 
-        <!-- Alerta de Feedback e Resgates Posicionado no Vão Central -->
+        <!-- Alerta de Feedback e Resgates Posicionado no Vao Central -->
         <?php if (!empty($mensagem)): ?>
             <div class="mensagem" style="margin-bottom: 30px; <?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
                 <?= htmlspecialchars($mensagem) ?>
             </div>
         <?php endif; ?>
-        <!-- Exibição Condicional do Histórico -->
-        <?php if ($clienteSelecionado): ?>
 
-            <!-- Banner Informativo de Progresso -->
+        <!-- Banner Informativo de Progresso (Exibido apenas quando um cliente especifico e selecionado) -->
+        <?php if ($clienteSelecionado): ?>
             <div class="info-box">
-                Total de pudins encomendados historicamente: <?= $totalProdutos ?> unidades.<br>
+                Total de pudins encomendados historicamente por este cliente: <?= $totalProdutos ?> unidades.<br>
                 <?php if ($faltamProdutos > 0): ?>
-                    🎯 Faltam apenas <?= $faltamProdutos ?> unidades para gerar o próximo bônus automático!
+                    Faltam apenas <?= $faltamProdutos ?> unidades para gerar o proximo bonus automatico!
                 <?php else: ?>
-                    🎉 Excelente! O próximo pedido deste cliente já contabilizará uma nova bonificação!
+                    O proximo pedido deste cliente ja contabilizara uma nova bonificacao!
                 <?php endif; ?>
             </div>
+        <?php endif; ?>
 
-            <!-- Bloco de Listagem de Encomendas -->
-            <div class="card-panel detalhes-bloco">
-                <h3>🛍️ Encomendas Registradas</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th width="20%">Código Pedido</th>
-                            <th width="45%">Data / Hora do Pedido</th>
-                            <th width="35%">Total de Produtos Solicitados</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (!empty($pedidos)): ?>
-                            <?php foreach ($pedidos as $p): ?>
-                                <tr>
-                                    <td><strong>#<?= $p['pedido_id'] ?></strong></td>
-                                    <td>
-                                        <?php 
-                                        if (!empty($p['data_pedido'])) {
-                                            echo date('d/m/Y H:i:s', strtotime($p['data_pedido']));
-                                        } else {
-                                            echo '<span style="color:#bbb; font-style:italic;">Data não registrada</span>';
-                                        }
-                                        ?>
-                                    </td>
-                                    <td><?= $p['total_produtos'] ?> un.</td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
+        <!-- Bloco de Listagem Geral de Encomendas -->
+        <div class="card-panel detalhes-bloco">
+            <h3>Encomendas Registradas</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="15%">Codigo</th>
+                        <th width="35%">Cliente</th>
+                        <th width="25%">Data / Hora do Pedido</th>
+                        <th width="25%">Total de Produtos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($pedidos)): ?>
+                        <?php foreach ($pedidos as $p): ?>
                             <tr>
-                                <td colspan="3" class="sem-dados">Nenhuma encomenda foi encontrada para este cliente.</td>
+                                <td><strong>#<?= $p['pedido_id'] ?></strong></td>
+                                <td><?= htmlspecialchars($p['nome_cliente']) ?></td>
+                                <td>
+                                    <?php 
+                                    if (!empty($p['data_pedido'])) {
+                                        echo date('d/m/Y H:i:s', strtotime($p['data_pedido']));
+                                    } else {
+                                        echo '<span style="color:#bbb; font-style:italic;">Data nao registrada</span>';
+                                    }
+                                    ?>
+                                </td>
+                                <td><?= $p['total_produtos'] ?> un.</td>
                             </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-            <!-- Bloco de Histórico de Bônus e Resgates Ativos -->
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="4" class="sem-dados">Nenhuma encomenda foi encontrada com os filtros aplicados.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Bloco de Historico de Bonus e Resgates Ativos (Exibido apenas quando um cliente especifico esta selecionado) -->
+        <?php if ($clienteSelecionado): ?>
             <div class="card-panel" style="border-left: 4px solid #f97316;">
-                <h3 style="color: #2c3e50;">🎁 Cartão Bônus Fidelidade (Disponíveis para Resgate)</h3>
+                <h3 style="color: #2c3e50;">Cartao Bonus Fidelidade (Disponiveis para Resgate)</h3>
                 <div style="margin-top: 15px;">
                     <?php if (!empty($bonus)): ?>
                         <?php foreach ($bonus as $b): ?>
                             <div class="bonus-box">
-                                <!-- Botão de Baixa Dinâmica [RF5] -->
-                                <a href="?cliente_id=<?= $clienteSelecionado ?>&resgatar_bonus=<?= $b['id'] ?>" class="btn-resgate" onclick="return confirm('Confirmar a entrega do pudim prêmio e dar baixa neste cupom de bônus?')">Confirmar Resgate</a>
-                                🌟 <?= htmlspecialchars($b['descricao']) ?>
+                                <a href="?cliente_id=<?= $clienteSelecionado ?>&resgatar_bonus=<?= $b['id'] ?>" class="btn-resgate" onclick="return confirm('Confirmar a entrega do pudim premio e dar baixa neste cupom de bonus?')">Confirmar Resgate</a>
+                                <?= htmlspecialchars($b['descricao']) ?>
                                 <small>Gerado em: <?= date('d/m/Y H:i', strtotime($b['data'])) ?></small>
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <p class="sem-dados">Este cliente não possui nenhum cupom de bônus ativo ou pendente de resgate no momento.</p>
+                        <p class="sem-dados">Este cliente nao possui nenhum cupom de bonus ativo ou pendente de resgate no momento.</p>
                     <?php endif; ?>
                 </div>
             </div>
-
         <?php endif; ?>
     </main>
 

@@ -176,16 +176,23 @@ if ($busca !== "") {
     <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
-                <ul>
-            <li><a href="http://localhost:8000/index.php">Início</a></li>
-            <li><a href="http://localhost:8000/public/clientes.php">Clientes</a></li>
-            <li><a href="http://localhost:8000/public/historico_cliente.php">Histórico de Clientes</a></li>
+  <ul>
+            <!-- Modulo de Clientes -->
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Clientes</li>
+            <li><a href="http://localhost:8000/public/clientes.php">Gerenciar Clientes</a></li>
+            <li><a href="http://localhost:8000/public/historico_cliente.php">Historico de Clientes</a></li>
+            
+            <!-- Modulo de Produtos -->
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Produtos</li>
             <li><a href="http://localhost:8000/public/cadastrar_produto.php">Cadastrar Produto</a></li>
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
-            <li><a href="http://localhost:8000/public/cadastrar_status.php">Gerenciar Status</a></li>
-            <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+            
+            <!-- Modulo de Pedidos e Vendas -->
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Vendas e Configuracoes</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
         </ul>
+
 
     </nav>
 
@@ -279,8 +286,8 @@ if ($busca !== "") {
                                     <a class="editar" href="?editar=<?= $cliente["id"] ?>">Editar</a>
 
                                     |
-                                    <a class="whatsapp" target="_blank" href="https://wa.me<?= preg_replace('/[^0-9]/', '', $cliente["telefone"]) ?>?text=Olá%20<?= urlencode($cliente["nome"]) ?>">WhatsApp</a>
-                                    |
+<a class="whatsapp" target="_blank" href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $cliente['telefone']) ?>?text=Olá%20<?= urlencode($cliente['nome']) ?>">WhatsApp</a>
+
                                     <a class="excluir" href="?excluir=<?= $cliente["id"] ?>" onclick="return confirm('Tem certeza que deseja excluir este cliente?')">Excluir</a>
                                 </td>
                             </tr>

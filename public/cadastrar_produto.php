@@ -88,25 +88,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
-        <ul>
-            <li><a href="http://localhost:8000/index.php">Início</a></li>
-            <li><a href="http://localhost:8000/public/clientes.php">Clientes</a></li>
-            <li><a href="http://localhost:8000/public/historico_cliente.php">Histórico de Clientes</a></li>
+  <ul>
+            <!-- Modulo de Clientes -->
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Clientes</li>
+            <li><a href="http://localhost:8000/public/clientes.php">Gerenciar Clientes</a></li>
+            <li><a href="http://localhost:8000/public/historico_cliente.php">Historico de Clientes</a></li>
+            
+            <!-- Modulo de Produtos -->
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Produtos</li>
             <li><a href="http://localhost:8000/public/cadastrar_produto.php">Cadastrar Produto</a></li>
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
-            <li><a href="http://localhost:8000/public/cadastrar_status.php">Gerenciar Status</a></li>
-            <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+            
+            <!-- Modulo de Pedidos e Vendas -->
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Vendas e Configuracoes</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
         </ul>
+
 
 
     </nav>
 
-    <!-- Área de Conteúdo Principal -->
-    <main class="main-content">
+    /* Área de cONTEUDO */
+        <main class="main-content">
         <div class="header">
-            <h1>Controle de Produtos (RF2)</h1>
-            <p>Cadastre novos itens e sabores para disponibilizá-los no módulo de vendas do sistema.</p>
+            <h1>Cadastrar Produto</h1>
+            <p>Cadastre novos itens e para disponibilizá-los em "vendas".</p>
         </div>
 
         <!-- Exibição de Alertas Estilizados Movido para o Vão Central -->
@@ -118,13 +125,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <!-- Box Envelopando o Formulário -->
         <div class="card-panel">
-            <h3>📦 Novo Produto</h3>
+            <h3> Novo Produto</h3>
             
             <form method="POST">
                 <div class="form-row">
                     <div class="form-group">
                         <label for="nome">Nome do Produto:</label>
-                        <input type="text" name="nome" id="nome" placeholder="Ex: Pudim de Leite Moça" required>
+                        <input type="text" name="nome" id="nome" placeholder="Ex: Bolo de morango" required>
                     </div>
 
                     <div class="form-group">
