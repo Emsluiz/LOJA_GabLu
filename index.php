@@ -1,5 +1,4 @@
-//hp
-// Redireciona direto para a tela de clientes dentro da pasta public
+<?php
 header("Location: public/clientes.php");
 exit;
 ?>
