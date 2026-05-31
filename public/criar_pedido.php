@@ -1,5 +1,9 @@
 <?php
+// Inclui a trava de segurança. Quem não tiver e-mail e senha é redirecionado na hora
+require_once __DIR__ . "/../config/verificar_login.php";
+
 require_once __DIR__ . "/../config/database.php";
+
 
 $clientes = $pdo->query("SELECT id, nome, telefone FROM clientes ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
 $produtos = $pdo->query("SELECT id, nome FROM produtos ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);

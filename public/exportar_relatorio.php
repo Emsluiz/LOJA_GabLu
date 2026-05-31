@@ -1,5 +1,9 @@
 <?php
+// Inclui a trava de segurança. Quem não tiver e-mail e senha é redirecionado na hora
+require_once __DIR__ . "/../config/verificar_login.php";
+
 require_once __DIR__ . "/../config/database.php";
+
 
 // Forca o navegador a fazer o download do arquivo em formato de texto puro
 header("Content-Type: text/plain; charset=utf-8");
