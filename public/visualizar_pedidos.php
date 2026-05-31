@@ -90,14 +90,14 @@ if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
                 } elseif ($novo_status === "Finalizado") {
 
                 if ($novoSaldoRestante == 0) {
-                        $progressoFidelidade = "\n\n🔥 *PARABÉNS! VOCÊ GANHOU UM BÔNUS!* 🔥\nCom este pedido, você atingiu a meta de 10 produtos e um novo *Cupom de Bônus* já foi gerado automaticamente para você! 🎁✨\nO seu próximo pedido já iniciará um novo ciclo de acúmulo.";
+                        $progressoFidelidade = "\n\n *PARABÉNS! VOCÊ GANHOU UM BÔNUS!* \nCom este pedido, você atingiu a meta de 10 produtos e um novo *Cupom de Bônus* já foi gerado automaticamente para você! \nO seu próximo pedido já iniciará um novo ciclo de acúmulo.";
                     } else {
 
                     $faltamParaProximo = 10 - $novoSaldoRestante;
-                        $progressoFidelidade = "\n\n📊 *Seu Progresso de Fidelidade:*\nVocê já tem *" . $novoSaldoRestante . "* produto(s) acumulados na conta. Faltam apenas *" . $faltamParaProximo . "* unidade(s) para você gerar o seu próximo *Prêmio Grátis!* 🎁";
+                        $progressoFidelidade = "\n\n *Seu Progresso de Fidelidade:*\nVocê já tem *" . $novoSaldoRestante . "* produto(s) acumulados na conta. Faltam apenas *" . $faltamParaProximo . "* unidade(s) para você gerar o seu próximo *Prêmio Grátis!* ";
                     }
 
-                    $mensagemTxt = "Olá " . $nomeCliente . "!\n\nÓtima notícia! O seu pedido de *" . $nomeProduto . "* (" . $qtd . " un.) já foi *finalizado* e está prontinho para retirada. Agradecemos muito pela preferência! 🥖✨" . $progressoFidelidade;
+                    $mensagemTxt = "Olá " . $nomeCliente . "!\n\nÓtima notícia! O seu pedido de *" . $nomeProduto . "* (" . $qtd . " un.) já foi *finalizado* e está prontinho para retirada. Agradecemos muito pela preferência! " . $progressoFidelidade;
                 } else {
                     $mensagemTxt = "Olá " . $nomeCliente . "!\n\nPassando para avisar que o seu pedido de *" . $nomeProduto . "* (" . $qtd . " un.) já mudou de situação e agora está: *" . $novo_status . "*.\n\nEstamos cuidando de tudo com muito carinho!";
                 }

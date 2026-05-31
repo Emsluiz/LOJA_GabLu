@@ -139,14 +139,14 @@ $listaBonus = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
                             // MONTAGEM BLINDADA: Junta o endereço oficial com a barra e o número limpo
                             $telefoneLimpo = preg_replace('/[^0-9]/', '', $bonus['telefone'] ?? '');
                             
-                            // Texto oficial, atraente e personalizado para o Bônus Fidelidade do cliente
-                            $msgWhats = "🎉 *BÔNUS FIDELIDADE DISPONÍVEL!* 🎉\n\nOlá " . trim($bonus['nome_cliente']) . "!\n\nÓtima notícia: você completou a sua meta de compras e acaba de ganhar um prêmio exclusivo do nosso sistema de fidelidade! 🎁\n\nO seu cupom (*" . trim($bonus['descricao']) . "*) já está liberado. Pode passar aqui para retirar o seu prêmio quando quiser!\n\nTe aguardamos com muito carinho! 🥖✨";
+                            // Texto oficial limpo e personalizado sem emojis para o cliente
+                            $msgWhats = " *BÔNUS FIDELIDADE DISPONÍVEL!* \n\nOlá " . trim($bonus['nome_cliente']) . "!\n\nÓtima notícia: você completou a sua meta de compras e acaba de ganhar um prêmio exclusivo do nosso sistema de fidelidade!\n\nO seu cupom (*" . trim($bonus['descricao']) . "*) já está liberado. Pode passar aqui para retirar o seu prêmio quando quiser!\n\nTe aguardamos com muito carinho!";
                             
                             $urlWhatsFixa = "https://wa.me/" . $telefoneLimpo . "?text=" . urlencode($msgWhats);
                         ?>
                         <div class="bonus-box">
                             <div class="bonus-info">
-                                <strong>🎁 <?= htmlspecialchars($bonus['descricao']) ?></strong>
+                                <strong><?= htmlspecialchars($bonus['descricao']) ?></strong>
                                 <span>Cliente: <?= htmlspecialchars($bonus['nome_cliente']) ?></span>
                                 <small>Código do Cupom: #<?= $bonus['bonus_id'] ?> | Gerado em: <?= date("d/m/Y H:i", strtotime($bonus['data_gerado'])) ?></small>
                             </div>
@@ -177,4 +177,3 @@ $listaBonus = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
 </body>
 </html>
-

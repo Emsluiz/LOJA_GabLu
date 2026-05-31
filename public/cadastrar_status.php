@@ -118,8 +118,8 @@ if (isset($_GET["sucesso"])) {
     if ($_GET["sucesso"] === "excluido") $mensagem = "Opção de status removida do sistema.";
 } elseif (isset($_GET["erro"])) {
     $tipoMensagem = "erro";
-    if ($_GET["erro"] === "critico") $mensagem = "⚠️ Bloqueado: Os status base do sistema não podem ser removidos.";
-    if ($_GET["erro"] === "vinculado") $mensagem = "⚠️ Bloqueado: Existem " . ($_GET["qtd"] ?? "") . " encomendas utilizando este status atualmente.";
+    if ($_GET["erro"] === "critico") $mensagem = " Bloqueado: Os status base do sistema não podem ser removidos.";
+    if ($_GET["erro"] === "vinculado") $mensagem = " Bloqueado: Existem " . ($_GET["qtd"] ?? "") . " encomendas utilizando este status atualmente.";
     if ($_GET["erro"] === "sistema") $mensagem = "Erro interno ao processar a operação.";
 }
 
@@ -224,7 +224,7 @@ $listaStatus = $pdo->query("SELECT * FROM status_pedido ORDER BY id ASC")->fetch
 
         <!-- Box Envelopando o Formulário de Cadastro ou Edição Dinâmica -->
         <div class="card-panel">
-            <h3><?= $statusEditar ? "📝 Alterar Nome do Status" : "➕ Criar Opção de Status" ?></h3>
+            <h3><?= $statusEditar ? "📝 Alterar Nome do Status" : " Criar Opção de Status" ?></h3>
             
             <form method="POST">
                 <?php if ($statusEditar): ?>
