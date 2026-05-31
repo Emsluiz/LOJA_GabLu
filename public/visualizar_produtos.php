@@ -5,79 +5,45 @@ $mensagem = "";
 $tipoMensagem = "sucesso";
 
 # =====================================
-# DELETAR PRODUTO (TRATADO CONTRA ERROS)
+# GATILHO: EXCLUIR PRODUTO DO CATÁLOGO
 # =====================================
 if (isset($_GET["excluir"])) {
-    $id = (int) $_GET["excluir"];
-    if ($id > 0) {
+    $id_excluir = (int)$_GET["excluir"];
+    if ($id_excluir > 0) {
         try {
-            $sql = "DELETE FROM produtos WHERE id = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$id]);
+            // Regra de Integridade Referencial: impede deletar se houver pedidos vinculados
+            $stmtCheck = $pdo->prepare("SELECT id FROM pedido_itens WHERE produto_id = ? LIMIT 1");
+            $stmtCheck->execute([$id_excluir]);
             
-            header("Location: visualizar_produtos.php?sucesso=excluido");
-            exit;
-        } catch (PDOException $e) {
-            // Código 23000 indica violação de chave estrangeira (produto está em algum pedido)
-            if ($e->getCode() == '23000') {
-                header("Location: visualizar_produtos.php?erro=vinculado");
-                exit;
+            if ($stmtCheck->fetch()) {
+                $mensagem = "Atenção: Não é possível excluir este produto porque ele já foi vendido em pedidos anteriores!";
+                $tipoMensagem = "erro";
             } else {
-                header("Location: visualizar_produtos.php?erro=sistema");
-                exit;
+                $stmtDel = $pdo->prepare("DELETE FROM produtos WHERE id = ?");
+                $stmtDel->execute([$id_excluir]);
+                $mensagem = "Produto removido do catálogo com sucesso.";
+                $tipoMensagem = "sucesso";
             }
+        } catch (Exception $e) {
+            $mensagem = "Erro ao tentar excluir produto.";
+            $tipoMensagem = "erro";
         }
     }
 }
 
 # =====================================
-# PROCESSAMENTO DE MENSAGENS
+# SELEÇÃO DOS PRODUTOS ATIVOS
 # =====================================
-if (isset($_GET["sucesso"])) {
-    $tipoMensagem = "sucesso";
-    if ($_GET["sucesso"] === "excluido") {
-        $mensagem = "Produto excluído com sucesso do catálogo!";
-    }
-} elseif (isset($_GET["erro"])) {
-    $tipoMensagem = "erro";
-    if ($_GET["erro"] === "vinculado") {
-        $mensagem = "⚠️ Não é possível excluir este produto pois ele já foi vendido em pedidos ativos do histórico!";
-    } elseif ($_GET["erro"] === "sistema") {
-        $mensagem = "Erro interno: Ocorreu um problema ao tentar processar a exclusão no banco.";
-    }
-}
-
-# =====================================
-# BUSCA E LISTAGEM DE PRODUTOS
-# =====================================
-$busca = trim($_GET["buscar"] ?? "");
-if ($busca !== "") {
-    $sql = "
-        SELECT *
-        FROM produtos
-        WHERE
-            id = ?
-            OR nome LIKE ?
-        ORDER BY id DESC
-    ";
-    $stmt = $pdo->prepare($sql);
-    // Permite buscar digitando o ID exato ou parte do nome
-    $pesquisaNome = "%{$busca}%";
-    $stmt->execute([$busca, $pesquisaNome]);
-    $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} else {
-    $sql = "SELECT * FROM produtos ORDER BY id DESC";
-    $produtos = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-}
-?>
-<!DOCTYPE html>
+$stmt = $pdo->query("SELECT * FROM produtos ORDER BY id DESC");
+$produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?><!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizar Produtos - Sistema Loja</title>
     <style>
-        /* CSS Unificado do Painel */
+        /* CSS Base Unificado do Painel */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f4f6f9; color: #333; display: flex; overflow-x: hidden; max-width: 100%; }
         
@@ -90,37 +56,22 @@ if ($busca !== "") {
         .sidebar ul li a:hover { background-color: #34495e; padding-left: 20px; }
         
         /* Área de Conteúdo */
-        .main-content { margin-left: 250px; padding: 40px; width: calc(100% - 250px); }
+        .main-content { margin-left: 250px; padding: 40px; width: calc(100% - 250px); min-height: 100vh; }
         .header { margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; padding-bottom: 15px; }
         .header h1 { color: #2c3e50; }
         
-        /* Blocos Card Panel */
+        /* Box da Tabela */
         .card-panel { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .card-panel h3 { color: #2c3e50; margin-bottom: 20px; font-size: 20px; border-left: 4px solid #3498db; padding-left: 10px; }
+        .card-panel h3 { color: #2c3e50; margin-bottom: 20px; font-size: 20px; border-left: 4px solid #2ecc71; padding-left: 10px; }
         
-        /* Barra de Busca */
-        .busca-container { display: flex; margin-bottom: 25px; }
-        .busca-container input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 15px; }
-        .btn { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: 0.3s; display: inline-block; text-decoration: none; text-align: center; }
-        .btn-search { background: #34495e; color: white; margin-left: 10px; }
-        .btn-search:hover { background: #2c3e50; }
-        .btn-secondary { background: #95a5a6; color: white; margin-left: 5px; }
-        .btn-secondary:hover { background: #7f8c8d; }
-        
-        /* Listagem de Tabela */
+        /* Tabelas Estilizadas */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
         table th, table td { padding: 14px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 15px; }
         table th { background: #f8f9fa; color: #34495e; font-weight: 600; }
         table tr:hover { background-color: #fcfcfc; }
         
-        /* Links de Ações */
-        .actions-links a { text-decoration: none; font-weight: 600; font-size: 14px; padding: 4px 8px; border-radius: 4px; transition: 0.2s; }
-        .actions-links .excluir { color: #e74c3c; }
-        .actions-links .excluir:hover { background: rgba(231,76,60,0.1); }
-        
-        /* Banner de Alertas */
-        .mensagem { padding: 15px; border-radius: 5px; margin-bottom: 25px; border-left: 5px solid #2ecc71; font-weight: 500; background: #d4edda; color: #155724; }
         .sem-dados { text-align: center; padding: 30px; color: #7f8c8d; font-style: italic; }
+        .mensagem { padding: 15px; border-radius: 5px; margin-bottom: 25px; border-left: 5px solid #2ecc71; font-weight: 500; background: #d4edda; color: #155724; }
 
         @media (max-width: 768px) {
             body { flex-direction: column; }
@@ -134,7 +85,6 @@ if ($busca !== "") {
     <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
-        
         <ul>
             <!-- Modulo de Clientes -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Clientes</li>
@@ -147,41 +97,28 @@ if ($busca !== "") {
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
             
             <!-- Modulo de Pedidos e Vendas -->
-            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Vendas e Configuracoes</li>
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Pedidos</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
             <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_bonus.php">Visualizar Bônus</a></li>
         </ul>
-
-
-
     </nav>
 
-    <!-- Área de Conteúdo Principal -->
-    <main class="main-content">
+    <!-- Area de Conteudo Principal -->
+    <div class="main-content">
         <div class="header">
-            <h1>Visualizar Produtos</h1>
-            <p>Gerencie o catálogo de produtos e os valores cadastrados no estoque.</p>
+            <h1>Catálogo de Produtos</h1>
         </div>
 
-        <!-- Exibição do Alerta Alinhado Centralizado -->
+        <!-- Exibição de Alertas Estilizados -->
         <?php if (!empty($mensagem)): ?>
             <div class="mensagem" style="margin-bottom: 30px; <?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
                 <?= htmlspecialchars($mensagem) ?>
             </div>
         <?php endif; ?>
 
-        <!-- Bloco de Listagem e Busca de Itens -->
         <div class="card-panel">
-            <h3>👁️ Lista de Itens Cadastrados</h3>
-            
-            <form method="GET" class="busca-container">
-                <input type="text" name="buscar" placeholder="🔍 Buscar produtos por código ID ou nome..." value="<?= htmlspecialchars($_GET["buscar"] ?? "") ?>">
-                <button type="submit" class="btn btn-search">Buscar</button>
-                <?php if ($busca !== ""): ?>
-                    <a href="visualizar_produtos.php" class="btn btn-secondary">Limpar</a>
-                <?php endif; ?>
-            </form>
-
+            <h3>Produtos Cadastrados</h3>
             <table>
                 <thead>
                     <tr>
@@ -192,26 +129,28 @@ if ($busca !== "") {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (count($produtos) > 0): ?>
+                    <?php if (is_array($produtos) && !empty($produtos)): ?>
                         <?php foreach ($produtos as $produto): ?>
                             <tr>
                                 <td><strong>#<?= $produto["id"] ?></strong></td>
                                 <td><?= htmlspecialchars($produto["nome"] ?? "") ?></td>
-                                <td>R$ <?= number_format((float)$produto["preco"], 2, ',', '.') ?></td>
-                                <td class="actions-links">
-                                    <a class="excluir" href="?excluir=<?= $produto["id"] ?>" onclick="return confirm('Tem certeza que deseja remover este produto do catálogo?')">Excluir</a>
+                                <td>R$ <?= number_format($produto["preco"], 2, ',', '.') ?></td>
+                                <td>
+                                    <a class="editar" href="cadastrar_produto.php?editar=<?= $produto["id"] ?>" style="color: #3498db; text-decoration: none; font-weight: bold; margin-right: 8px;">Editar</a>
+                                    |
+                                    <a class="excluir" href="?excluir=<?= $produto["id"] ?>" onclick="return confirm('Deseja realmente excluir este produto?')" style="color: #e74c3c; text-decoration: none; font-weight: bold; margin-left: 8px;">Excluir</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="4" class="sem-dados">Nenhum produto foi cadastrado ou localizado na busca.</td>
+                            <td colspan="4" class="sem-dados">Nenhum produto cadastrado no catálogo.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
-    </main>
+    </div>
 
 </body>
 </html>

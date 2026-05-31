@@ -5,41 +5,11 @@ $mensagem = "";
 $tipoMensagem = "sucesso";
 $linkWhatsAltera = "";
 
-// 1. Busca os estados disponiveis para popular o filtro da tela
-$statusDisponiveis = $pdo->query("SELECT nome FROM status_pedido ORDER BY id ASC")->fetchAll(PDO::FETCH_COLUMN);
+// REQUISITO FIXO DA PADARIA: Status imutáveis definidos direto na regra de negócio
+$statusDisponiveis = ['Pendente', 'Em Preparo', 'Pronto para Entrega', 'Finalizado', 'Cancelado'];
 
-// 2. Captura o status selecionado pelo usuario
+// Captura o status selecionado pelo usuario no filtro
 $filtroStatus = trim($_GET["filtro_status"] ?? "");
-
-# =====================================
-# GATILHO: CADASTRAR NOVO STATUS EMBUTIDO
-# =====================================
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["cadastrar_status_novo"])) {
-    $nome_status = trim($_POST["nome_status"] ?? "");
-
-    if ($nome_status !== "") {
-        try {
-            $stmtCheck = $pdo->prepare("SELECT id FROM status_pedido WHERE nome = ?");
-            $stmtCheck->execute([$nome_status]);
-            
-            if ($stmtCheck->fetch()) {
-                $mensagem = "Atencao: Esta situacao ja esta cadastrada no sistema.";
-                $tipoMensagem = "erro";
-            } else {
-                $stmtInsert = $pdo->prepare("INSERT INTO status_pedido (nome) VALUES (?)");
-                $stmtInsert->execute([$nome_status]);
-                
-                $mensagem = "Nova situacao '" . $nome_status . "' cadastrada com sucesso.";
-                $tipoMensagem = "sucesso";
-                
-                $statusDisponiveis = $pdo->query("SELECT nome FROM status_pedido ORDER BY id ASC")->fetchAll(PDO::FETCH_COLUMN);
-            }
-        } catch (Exception $e) {
-            $mensagem = "Erro ao cadastrar situacao: " . $e->getMessage();
-            $tipoMensagem = "erro";
-        }
-    }
-}
 
 # =====================================
 # GATILHO: ALTERAR STATUS DO PEDIDO
@@ -56,42 +26,41 @@ if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
             $stmtUpdate->execute([$novo_status, $pedido_id]);
 
             if ($novo_status === "Finalizado") {
-                $stmtDados = $pdo->prepare("
-                    SELECT p.cliente_id, SUM(pi.quantidade) AS qtd 
-                    FROM pedidos p 
-                    JOIN pedido_itens pi ON pi.pedido_id = p.id 
-                    WHERE p.id = ? 
-                    GROUP BY p.id
-                ");
-                $stmtDados->execute([$pedido_id]);
-                $dadosPedido = $stmtDados->fetch(PDO::FETCH_ASSOC);
+                // 1. Busca o ID do cliente dono deste pedido de forma isolada
+                $stmtCli = $pdo->prepare("SELECT cliente_id FROM pedidos WHERE id = ?");
+                $stmtCli->execute([$pedido_id]);
+                $cliente_id = (int)$stmtCli->fetchColumn();
 
-                if ($dadosPedido) {
-                    $cliente_id = (int)$dadosPedido["cliente_id"];
-                    $quantidade = (int)$dadosPedido["qtd"];
+                if ($cliente_id > 0) {
+                    // 2. SOMA DIRETA: Busca a quantidade real de itens somando direto na tabela de vinculo
+                    $stmtQtd = $pdo->prepare("SELECT SUM(quantidade) FROM pedido_itens WHERE pedido_id = ?");
+                    $stmtQtd->execute([$pedido_id]);
+                    $quantidadeVendida = (int)$stmtQtd->fetchColumn();
 
+                    // 3. Captura o saldo residual que o cliente ja tinha acumulado
                     $stmtSaldo = $pdo->prepare("SELECT saldo_itens FROM clientes WHERE id = ?");
                     $stmtSaldo->execute([$cliente_id]);
                     $saldoAtual = (int)$stmtSaldo->fetchColumn();
 
-                    $totalAgora = $saldoAtual + $quantidade;
-                    $bonusGerados = intdiv($totalAgora, 10);
-                    $novoSaldo = $totalAgora % 10;
+                    // 4. Executa a matematica exata de divisao e resto de fidelidade
+                    $totalAcumulado = $saldoAtual + $quantidadeVendida;
+                    $bonusGerados = intdiv($totalAcumulado, 10); // A cada 10 vira 1 bonus inteiro
+                    $novoSaldoRestante = $totalAcumulado % 10;   // O resto continua na conta do cliente
 
+                    // 5. Atualiza o saldo de itens do cliente de forma persistente
                     $stmtUpSaldo = $pdo->prepare("UPDATE clientes SET saldo_itens = ? WHERE id = ?");
-                    $stmtUpSaldo->execute([$novoSaldo, $cliente_id]);
+                    $stmtUpSaldo->execute([$novoSaldoRestante, $cliente_id]);
 
+                    // 6. Injeta os registros de cupons de direito na tabela de bonus
                     if ($bonusGerados > 0) {
-                        $stmtBonus = $pdo->prepare("INSERT INTO bonus (cliente_id, descricao) VALUES (?, ?)");
+                        $stmtBonus = $pdo->prepare("INSERT INTO bonus (cliente_id, descricao, data) VALUES (?, ?, NOW())");
                         for ($i = 0; $i < $bonusGerados; $i++) {
                             $stmtBonus->execute([$cliente_id, "Bônus por completar 10 produtos"]);
                         }
                     }
                 }
             }
-            $pdo->commit();
 
-            // Busca dados do comprador E do produto para estruturar a notificacao
             $stmtWhats = $pdo->prepare("
                 SELECT c.nome, c.telefone, pr.nome AS nome_produto, pi.quantidade
                 FROM pedidos p 
@@ -111,7 +80,6 @@ if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
                 $nomeProduto = trim($clienteWhats["nome_produto"]);
                 $qtd = (int)$clienteWhats["quantidade"];
 
-                // Monta mensagens totalmente personalizadas e humanas baseadas na situacao
                 if ($novo_status === "Cancelado") {
                     $mensagemTxt = "Olá " . $nomeCliente . "!\n\nPassando para te avisar que o seu pedido de *" . $nomeProduto . "* (Quantidade: " . $qtd . " un.) infelizmente precisou ser *cancelado*.\n\nSe tiver qualquer dúvida ou quiser refazer a encomenda, é só nos chamar por aqui!";
                 } elseif ($novo_status === "Finalizado") {
@@ -120,7 +88,6 @@ if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
                     $mensagemTxt = "Olá " . $nomeCliente . "!\n\nPassando para avisar que o seu pedido de *" . $nomeProduto . "* (" . $qtd . " un.) já mudou de situação e agora está: *" . $novo_status . "*.\n\nEstamos cuidando de tudo com muito carinho!";
                 }
                 
-                // Mantem o seu separador rigido que funcionou perfeitamente
                 $linkWhatsAltera = "https:" . DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR . "wa.me" . DIRECTORY_SEPARATOR . trim($telefoneLimpo) . "?text=" . urlencode($mensagemTxt);
             }
 
@@ -131,7 +98,6 @@ if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
             $mensagem = "Erro ao alterar status: " . $e->getMessage();
             $tipoMensagem = "erro";
         }
-
     }
 }
 
@@ -147,18 +113,20 @@ $sqlPedidos = "
 ";
 
 $params = [];
-
 if ($filtroStatus !== "") {
     $sqlPedidos .= " AND p.status = ? ";
     $params[] = $filtroStatus;
 }
-
 $sqlPedidos .= " GROUP BY p.id ORDER BY p.id DESC ";
 
 $stmt = $pdo->prepare($sqlPedidos);
 $stmt->execute($params);
 $listaPedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$totalPedidosExibidos = count($listaPedidos);
+$totalItensVendidos = array_sum(array_column($listaPedidos, 'total_produtos'));
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -189,7 +157,7 @@ $listaPedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .btn { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600; transition: 0.3s; display: inline-block; text-decoration: none; text-align: center; }
         .btn-primary { background: #3498db; color: white; }
         .btn-primary:hover { background: #2980b9; }
-        .btn-success-whats { background: #2ecc71; color: white; width: 100%; text-decoration: none; margin-bottom: 20px; }
+        .btn-success-whats { background: #2ecc71; color: white; width: 100%; text-decoration: none; margin-bottom: 20px; font-weight: 600; }
         .btn-success-whats:hover { background: #27ae60; }
         
         .badge-status { font-weight: bold; padding: 6px 12px; border-radius: 4px; font-size: 13px; display: inline-block; background: #e0e0e0; color: #333; }
@@ -198,6 +166,8 @@ $listaPedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .status-Finalizado { background: #e2fbe8; color: #1e7e34; }
         .status-Cancelado { background: #f8d7da; color: #721c24; }
         .status-Em-Preparo { background: #fff3cd; color: #856404; }
+        .status-Pronto-para-Entrega { background: #d1ecf1; color: #0c5460; }
+        .status-Pendente { background: #e2e3e5; color: #383d41; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
         table th, table td { padding: 14px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 15px; }
@@ -224,9 +194,11 @@ $listaPedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
             
             <!-- Modulo de Pedidos e Vendas -->
-            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Vendas e Configuracoes</li>
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Pedidos</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
             <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+         <li><a href="http://localhost:8000/public/visualizar_bonus.php">Visualizar Bônus</a></li>
+
         </ul>
     </nav>
 
@@ -254,51 +226,42 @@ $listaPedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <?php endif; ?>
 
         <div class="card-panel">
-            <h3>Filtros e Configuracoes de Encomendas</h3>
-            
-            <!-- Conteiner unificado em linha para alinhar os elementos lado a lado -->
-            <div class="filtro-container" style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
-                
-                <!-- Formulario de Filtro Existente -->
-                <form method="GET" style="display: flex; gap: 10px; align-items: flex-end; flex: 1; min-width: 280px;">
-                    <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
-                        <label for="filtro_status">Filtrar por Situacao:</label>
-                        <select name="filtro_status" id="filtro_status">
-                            <option value="">-- Todos os pedidos registrados --</option>
-                            <?php foreach ($statusDisponiveis as $stNome): ?>
-                                <option value="<?= htmlspecialchars($stNome) ?>" <?= $filtroStatus === $stNome ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($stNome) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Filtrar</button>
-                </form>
-
-                <!-- Divisor Visual Sutil entre os dois Blocos -->
-                <div style="width: 2px; background-color: #e0e0e0; height: 45px; align-self: flex-end; margin: 0 10px;"></div>
-
-                <!-- Formulario Embutido de Novo Status posicionado ao lado -->
-                <form method="POST" action="" style="display: flex; gap: 10px; align-items: flex-end; flex: 1; min-width: 320px;">
-                    <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
-                        <label for="nome_status">Cadastrar Nova Situacao:</label>
-                        <input type="text" name="nome_status" id="nome_status" placeholder="Ex: Saiu para Entrega" required style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 15px; background: white;">
-                    </div>
-                    <button type="submit" name="cadastrar_status_novo" class="btn btn-primary" style="background-color: #34495e;">Criar Status</button>
-                </form>
-
-            </div>
+            <h3>Filtros de Encomendas</h3>
+            <form method="GET" style="display: flex; gap: 10px; align-items: flex-end; max-width: 400px;">
+                <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
+                    <label for="filtro_status">Filtrar por Situação:</label>
+                    <select name="filtro_status" id="filtro_status">
+                        <option value="">-- Todos os pedidos registrados --</option>
+                        <?php foreach ($statusDisponiveis as $stNome): ?>
+                            <option value="<?= htmlspecialchars($stNome) ?>" <?= $filtroStatus === $stNome ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($stNome) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </form>
         </div>
 
         <div class="card-panel">
-            <!-- Cabeçalho alinhado em linha para colocar o título e o botão de frente -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
                 <h3 style="margin-bottom: 0;">Situação do pedido</h3>
-                
-                <!-- O botão foi movido para cá, ficando de frente com o título -->
                 <a href="http://localhost:8000/public/exportar_relatorio.php" class="btn" style="background-color: #2ecc71; color: white; text-decoration: none; font-weight: 600; padding: 10px 20px; font-size: 14px; border-radius: 5px;">
                     Baixar Relatório (.TXT)
                 </a>
+            </div>
+
+            <!-- Totalizadores Gerenciais Dinâmicos -->
+            <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 180px; background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #3498db;">
+                    <span style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 5px;">Pedidos Listados</span>
+                    <strong style="font-size: 20px; color: #2c3e50;"><?= $totalPedidosExibidos ?> registros</strong>
+                </div>
+                
+                <div style="flex: 1; min-width: 180px; background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #e67e22;">
+                    <span style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 5px;">Volume de Itens</span>
+                    <strong style="font-size: 20px; color: #2c3e50;"><?= $totalItensVendidos ?> un.</strong>
+                </div>
             </div>
 
             <table>

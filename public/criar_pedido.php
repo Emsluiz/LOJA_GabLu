@@ -127,7 +127,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
-  <ul>
+        <ul>
             <!-- Modulo de Clientes -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Clientes</li>
             <li><a href="http://localhost:8000/public/clientes.php">Gerenciar Clientes</a></li>
@@ -139,9 +139,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
             
             <!-- Modulo de Pedidos e Vendas -->
-            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Vendas e Configuracoes</li>
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Pedidos</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
             <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_bonus.php">Visualizar Bônus</a></li>
         </ul>
 
     </nav>

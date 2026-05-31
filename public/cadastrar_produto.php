@@ -2,8 +2,20 @@
 require_once __DIR__ . "/../config/database.php";
 
 $mensagem = "";
-$tipoMensagem = "sucesso"; // Padrão é mensagem verde
+$tipoMensagem = "sucesso";
 
+// 1. LÓGICA DE BUSCA: Se a URL tiver ?editar=ID, busca os dados para preencher o formulário
+$produtoEditar = null;
+if (isset($_GET["editar"])) {
+    $id_editar = (int)$_GET["editar"];
+    if ($id_editar > 0) {
+        $stmt = $pdo->prepare("SELECT * FROM produtos WHERE id = ?");
+        $stmt->execute([$id_editar]);
+        $produtoEditar = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+}
+
+// 2. PROCESSAMENTO DO FORMULÁRIO (SALVAR CADASTRO OU EDIÇÃO)
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $nome  = trim($_POST["nome"] ?? "");
     $preco = $_POST["preco"] ?? "";
@@ -14,25 +26,53 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } else {
         $preco = (float) $preco;
 
-        // VALIDAÇÃO DE DUPLICIDADE: Verifica se já existe um produto com o mesmo nome
-        $sqlCheck = "SELECT id FROM produtos WHERE nome = ?";
-        $stmtCheck = $pdo->prepare($sqlCheck);
-        $stmtCheck->execute([$nome]);
-        
-        if ($stmtCheck->fetch()) {
-            $tipoMensagem = "erro";
-            $mensagem = "Atenção: Já existe um produto cadastrado com este nome!";
-        } else {
-            // Se não existir, realiza o cadastro normalmente no catálogo [RF2]
-            $sql = "INSERT INTO produtos (nome, preco) VALUES (?, ?)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$nome, $preco]);
+        if (isset($_POST["salvar_edicao"])) {
+            # =====================================
+            # AÇÃO: ATUALIZAR PRODUTO EXISTENTE
+            # =====================================
+            $id = (int)($_POST["id"] ?? 0);
+            
+            // Valida duplicidade ignorando maiúsculas/minúsculas e o próprio ID que está sendo editado
+            $sqlCheck = "SELECT id FROM produtos WHERE LOWER(nome) = LOWER(?) AND id <> ?";
+            $stmtCheck = $pdo->prepare($sqlCheck);
+            $stmtCheck->execute([$nome, $id]);
+            
+            if ($stmtCheck->fetch()) {
+                $tipoMensagem = "erro";
+                $mensagem = "Atenção: Já existe outro produto cadastrado com este nome!";
+            } else {
+                $sql = "UPDATE produtos SET nome = ?, preco = ? WHERE id = ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$nome, $preco, $id]);
 
-            $mensagem = "Produto cadastrado com sucesso!";
+                header("Location: visualizar_produtos.php?sucesso=editado");
+                exit;
+            }
+        } else {
+            # =====================================
+            # AÇÃO: CADASTRAR NOVO PRODUTO
+            # =====================================
+            // Valida duplicidade de forma inteligente ignorando maiúsculas/minúsculas
+            $sqlCheck = "SELECT id FROM produtos WHERE LOWER(nome) = LOWER(?)";
+            $stmtCheck = $pdo->prepare($sqlCheck);
+            $stmtCheck->execute([$nome]);
+            
+            if ($stmtCheck->fetch()) {
+                $tipoMensagem = "erro";
+                $mensagem = "Atenção: Já existe um produto cadastrado com este nome!";
+            } else {
+                $sql = "INSERT INTO produtos (nome, preco) VALUES (?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$nome, $preco]);
+
+                $mensagem = "Produto cadastrado com sucesso!";
+            }
         }
     }
 }
+
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -88,7 +128,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
-  <ul>
+        <ul>
             <!-- Modulo de Clientes -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Clientes</li>
             <li><a href="http://localhost:8000/public/clientes.php">Gerenciar Clientes</a></li>
@@ -100,19 +140,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
             
             <!-- Modulo de Pedidos e Vendas -->
-            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Vendas e Configuracoes</li>
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Pedidos</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
             <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+                        <li><a href="http://localhost:8000/public/visualizar_bonus.php">Visualizar Bônus</a></li>
+
         </ul>
-
-
-
     </nav>
 
-    /* Área de cONTEUDO */
-        <main class="main-content">
+    <!-- Área de Conteúdo Principal -->
+    <main class="main-content">
         <div class="header">
-            <h1>Cadastrar Produto</h1>
+            <h1><?= $produtoEditar ? "Editar Produto" : "Cadastrar Produto" ?></h1>
             <p>Cadastre novos itens e para disponibilizá-los em "vendas".</p>
         </div>
 
@@ -125,22 +164,35 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <!-- Box Envelopando o Formulário -->
         <div class="card-panel">
-            <h3> Novo Produto</h3>
+            <h3><?= $produtoEditar ? "Editar Dados do Produto" : "Novo Produto" ?></h3>
             
             <form method="POST">
+                <!-- Injeta o ID de forma oculta apenas se a variável de edição estiver ativa -->
+                <?php if ($produtoEditar): ?>
+                    <input type="hidden" name="id" value="<?= $produtoEditar["id"] ?>">
+                <?php endif; ?>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="nome">Nome do Produto:</label>
-                        <input type="text" name="nome" id="nome" placeholder="Ex: Bolo de morango" required>
+                        <input type="text" name="nome" id="nome" placeholder="Ex: Bolo de morango" required value="<?= htmlspecialchars($produtoEditar["nome"] ?? "") ?>">
                     </div>
 
                     <div class="form-group">
                         <label for="preco">Preço de Venda (R$):</label>
-                        <input type="number" name="preco" id="preco" placeholder="0,00" step="0.01" min="0.01" required>
+                        <input type="number" name="preco" id="preco" placeholder="0,00" step="0.01" min="0.01" required value="<?= htmlspecialchars($produtoEditar["preco"] ?? "") ?>">
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-success">Cadastrar Produto</button>
+                <!-- Alterna o gatilho e o nome do botão baseado no estado da página -->
+                <?php if ($produtoEditar): ?>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" name="salvar_edicao" class="btn btn-success" style="flex: 3;">Salvar Alterações</button>
+                        <a href="visualizar_produtos.php" class="btn" style="background-color: #7f8c8d; color: white; flex: 1; text-decoration: none;">Cancelar</a>
+                    </div>
+                <?php else: ?>
+                    <button type="submit" name="cadastrar" class="btn btn-success">Cadastrar Produto</button>
+                <?php endif; ?>
             </form>
         </div>
     </main>

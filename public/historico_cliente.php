@@ -175,7 +175,7 @@ if ($clienteSelecionado) {
     <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
-  <ul>
+        <ul>
             <!-- Modulo de Clientes -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Clientes</li>
             <li><a href="http://localhost:8000/public/clientes.php">Gerenciar Clientes</a></li>
@@ -187,9 +187,10 @@ if ($clienteSelecionado) {
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
             
             <!-- Modulo de Pedidos e Vendas -->
-            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Vendas e Configuracoes</li>
+            <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Pedidos</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
             <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
+            <li><a href="http://localhost:8000/public/visualizar_bonus.php">Visualizar Bônus</a></li>
         </ul>
 
     </nav>
@@ -237,18 +238,6 @@ if ($clienteSelecionado) {
             </div>
         <?php endif; ?>
 
-        <!-- Banner Informativo de Progresso (Exibido apenas quando um cliente especifico e selecionado) -->
-        <?php if ($clienteSelecionado): ?>
-            <div class="info-box">
-                Total de pudins encomendados historicamente por este cliente: <?= $totalProdutos ?> unidades.<br>
-                <?php if ($faltamProdutos > 0): ?>
-                    Faltam apenas <?= $faltamProdutos ?> unidades para gerar o proximo bonus automatico!
-                <?php else: ?>
-                    O proximo pedido deste cliente ja contabilizara uma nova bonificacao!
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
-
         <!-- Bloco de Listagem Geral de Encomendas -->
         <div class="card-panel detalhes-bloco">
             <h3>Encomendas Registradas</h3>
@@ -287,26 +276,6 @@ if ($clienteSelecionado) {
                 </tbody>
             </table>
         </div>
-
-        <!-- Bloco de Historico de Bonus e Resgates Ativos (Exibido apenas quando um cliente especifico esta selecionado) -->
-        <?php if ($clienteSelecionado): ?>
-            <div class="card-panel" style="border-left: 4px solid #f97316;">
-                <h3 style="color: #2c3e50;">Cartao Bonus Fidelidade (Disponiveis para Resgate)</h3>
-                <div style="margin-top: 15px;">
-                    <?php if (!empty($bonus)): ?>
-                        <?php foreach ($bonus as $b): ?>
-                            <div class="bonus-box">
-                                <a href="?cliente_id=<?= $clienteSelecionado ?>&resgatar_bonus=<?= $b['id'] ?>" class="btn-resgate" onclick="return confirm('Confirmar a entrega do pudim premio e dar baixa neste cupom de bonus?')">Confirmar Resgate</a>
-                                <?= htmlspecialchars($b['descricao']) ?>
-                                <small>Gerado em: <?= date('d/m/Y H:i', strtotime($b['data'])) ?></small>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <p class="sem-dados">Este cliente nao possui nenhum cupom de bonus ativo ou pendente de resgate no momento.</p>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endif; ?>
     </main>
 
 </body>
