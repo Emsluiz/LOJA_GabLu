@@ -19,47 +19,21 @@ $totalProdutos = 0;
 $faltamProdutos = 0;
 
 # =====================================
-# GATILHO: CONFIRMAR RESGATE DE BONIFICAÇÃO (RF5)
-# =====================================
-if (isset($_GET["resgatar_bonus"])) {
-    $bonus_id = (int)$_GET["resgatar_bonus"];
-    $url_cliente = (int)($_GET["cliente_id"] ?? 0);
-
-    if ($bonus_id > 0 && $url_cliente > 0) {
-        try {
-            // Remove o prêmio entregue para dar baixa no sistema [RF5]
-            $stmtResgate = $pdo->prepare("DELETE FROM bonus WHERE id = ? AND cliente_id = ?");
-            $stmtResgate->execute([$bonus_id, $url_cliente]);
-
-            header("Location: historico_cliente.php?cliente_id=" . $url_cliente . "&sucesso=resgatado");
-            exit;
-        } catch (PDOException $e) {
-            header("Location: historico_cliente.php?cliente_id=" . $url_cliente . "&erro=sistema");
-            exit;
-        }
-    }
-}
-
-# =====================================
-# PROCESSAMENTO DE ALERTAS DE RESGATE
-# =====================================
-if (isset($_GET["sucesso"]) && $_GET["sucesso"] === "resgatado") {
-    $mensagem = "🎁 Prêmio entregue com sucesso! O bônus foi debitado da conta do cliente (RF5).";
-    $tipoMensagem = "sucesso";
-} elseif (isset($_GET["erro"])) {
-    $tipoMensagem = "erro";
-    $mensagem = "Erro interno: Não foi possível processar o resgate do prêmio.";
-}
-
-# =====================================
 # BUSCA DE HISTÓRICO CONSOLIDADO (GERAL OU FILTRADO)
 # =====================================
 
 // Query principal adaptada para buscar todas as vendas do sistema por padrão
 $sqlPedidos = "
-    SELECT p.id AS pedido_id, p.data AS data_pedido, SUM(pi.quantidade) AS total_produtos, c.nome AS nome_cliente, p.cliente_id
+    SELECT 
+        p.id AS pedido_id, 
+        p.data AS data_pedido, 
+        SUM(pi.quantidade) AS total_produtos, 
+        c.nome AS nome_cliente, 
+        p.cliente_id,
+        GROUP_CONCAT(CONCAT(pi.quantidade, 'x ', pr.nome) SEPARATOR ', ') AS detalhe_produtos
     FROM pedidos p
     JOIN pedido_itens pi ON pi.pedido_id = p.id
+    JOIN produtos pr ON pi.produto_id = pr.id
     JOIN clientes c ON p.cliente_id = c.id
     WHERE 1=1
 ";
@@ -197,7 +171,7 @@ if ($clienteSelecionado) {
             <li><a href="http://localhost:8000/public/visualizar_bonus.php">Visualizar Bônus</a></li>
         </ul>
 
-    </nav>
+  </nav>
     <!-- Area de Conteudo Principal -->
     <main class="main-content">
         <div class="header">
@@ -269,7 +243,13 @@ if ($clienteSelecionado) {
                                     }
                                     ?>
                                 </td>
-                                <td><?= $p['total_produtos'] ?> un.</td>
+                                <!-- ALTERAÇÃO CIRÚRGICA: Mostra a quantidade total e lista os produtos ao lado -->
+                                <td>
+                                    <strong><?= (int)$p['total_produtos'] ?> un.</strong>
+                                    <span style="color: #666; font-size: 14px; margin-left: 4px; font-weight: normal;">
+                                        (<?= htmlspecialchars($p['detalhe_produtos'] ?? 'Sem descrição') ?>)
+                                    </span>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
