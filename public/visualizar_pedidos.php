@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . "/../config/database.php";
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'database.php';
 
 $mensagem = "";
 $tipoMensagem = "sucesso";
@@ -53,13 +53,16 @@ if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
 
                     // 6. Injeta os registros de cupons de direito na tabela de bonus
                     if ($bonusGerados > 0) {
-                        $stmtBonus = $pdo->prepare("INSERT INTO bonus (cliente_id, descricao, data) VALUES (?, ?, NOW())");
+                        $stmtBonus = $pdo->prepare("INSERT INTO bonus (cliente_id, descricao) VALUES (?, ?)");
                         for ($i = 0; $i < $bonusGerados; $i++) {
                             $stmtBonus->execute([$cliente_id, "Bônus por completar 10 produtos"]);
                         }
                     }
                 }
             }
+
+            // CORREÇÃO CRUCIAL: Salva as alterações fisicamente no banco antes de mandar o WhatsApp
+            $pdo->commit();
 
             $stmtWhats = $pdo->prepare("
                 SELECT c.nome, c.telefone, pr.nome AS nome_produto, pi.quantidade
@@ -100,7 +103,6 @@ if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
         }
     }
 }
-
 # =====================================
 # SELEÇÃO DOS PEDIDOS NA TABELA GERAL
 # =====================================
