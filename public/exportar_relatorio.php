@@ -5,11 +5,9 @@ require_once __DIR__ . "/../config/verificar_login.php";
 require_once __DIR__ . "/../config/database.php";
 
 
-// Forca o navegador a fazer o download do arquivo em formato de texto puro
 header("Content-Type: text/plain; charset=utf-8");
 header("Content-Disposition: attachment; filename=relatorio_vendas_concluidas_" . date('Ymd_His') . ".txt");
 
-// Consulta SQL ajustada com o filtro WHERE para trazer estritamente pedidos com status Finalizado
 $sql = "
     SELECT p.id AS pedido_id, c.nome AS nome_cliente, p.data AS data_pedido, p.status AS status_pedido,
            GROUP_CONCAT(CONCAT(pr.nome, ' (', pi.quantidade, ' un)') SEPARATOR ', ') AS produtos_detalhe
@@ -25,7 +23,6 @@ $sql = "
 try {
     $pedidos = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
-    // Escreve o cabecalho do relatorio de texto
     echo "==================================================\n";
     echo "       RELATORIO DE VENDAS CONCLUIDAS (CAIXA)     \n";
     echo "         Gerado em: " . date('d/m/Y H:i:s') . "  \n";

@@ -1,5 +1,4 @@
 <?php
-// Inclui a trava de segurança. Quem não tiver e-mail e senha é redirecionado na hora
 require_once __DIR__ . "/../config/verificar_login.php";
 
 require_once __DIR__ . "/../config/database.php";
@@ -8,7 +7,6 @@ require_once __DIR__ . "/../config/database.php";
 $mensagem = "";
 $tipoMensagem = "sucesso";
 
-// 1. LÓGICA DE BUSCA: Se a URL tiver ?editar=ID, busca os dados para preencher o formulário
 $produtoEditar = null;
 if (isset($_GET["editar"])) {
     $id_editar = (int)$_GET["editar"];
@@ -19,7 +17,6 @@ if (isset($_GET["editar"])) {
     }
 }
 
-// 2. PROCESSAMENTO DO FORMULÁRIO (SALVAR CADASTRO OU EDIÇÃO)
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $nome  = trim($_POST["nome"] ?? "");
     $preco = $_POST["preco"] ?? "";
@@ -31,12 +28,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $preco = (float) $preco;
 
         if (isset($_POST["salvar_edicao"])) {
-            # =====================================
-            # AÇÃO: ATUALIZAR PRODUTO EXISTENTE
-            # =====================================
             $id = (int)($_POST["id"] ?? 0);
             
-            // Valida duplicidade ignorando maiúsculas/minúsculas e o próprio ID que está sendo editado
             $sqlCheck = "SELECT id FROM produtos WHERE LOWER(nome) = LOWER(?) AND id <> ?";
             $stmtCheck = $pdo->prepare($sqlCheck);
             $stmtCheck->execute([$nome, $id]);
@@ -53,10 +46,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 exit;
             }
         } else {
-            # =====================================
-            # AÇÃO: CADASTRAR NOVO PRODUTO
-            # =====================================
-            // Valida duplicidade de forma inteligente ignorando maiúsculas/minúsculas
             $sqlCheck = "SELECT id FROM produtos WHERE LOWER(nome) = LOWER(?)";
             $stmtCheck = $pdo->prepare($sqlCheck);
             $stmtCheck->execute([$nome]);

@@ -7,15 +7,10 @@ $mensagem = "";
 $tipoMensagem = "sucesso";
 $linkWhatsAltera = "";
 
-// REQUISITO FIXO DA PADARIA: Status imutáveis definidos direto na regra de negócio
 $statusDisponiveis = ['Pendente', 'Em Preparo', 'Pronto para Entrega', 'Finalizado', 'Cancelado'];
 
-// Captura o status selecionado pelo usuario no filtro
 $filtroStatus = trim($_GET["filtro_status"] ?? "");
 
-# =====================================
-# GATILHO: ALTERAR STATUS DO PEDIDO
-# =====================================
 if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
     $pedido_id = (int)$_GET["alterar_status"];
     $novo_status = trim($_GET["novo_status"]);
@@ -28,32 +23,28 @@ if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
             $stmtUpdate->execute([$novo_status, $pedido_id]);
 
             if ($novo_status === "Finalizado") {
-                // 1. Busca o ID do cliente dono deste pedido de forma isolada
-                $stmtCli = $pdo->prepare("SELECT cliente_id FROM pedidos WHERE id = ?");
+
+            $stmtCli = $pdo->prepare("SELECT cliente_id FROM pedidos WHERE id = ?");
                 $stmtCli->execute([$pedido_id]);
                 $cliente_id = (int)$stmtCli->fetchColumn();
 
                 if ($cliente_id > 0) {
-                    // 2. SOMA DIRETA: Busca a quantidade real de itens somando direto na tabela de vinculo
-                    $stmtQtd = $pdo->prepare("SELECT SUM(quantidade) FROM pedido_itens WHERE pedido_id = ?");
+
+                $stmtQtd = $pdo->prepare("SELECT SUM(quantidade) FROM pedido_itens WHERE pedido_id = ?");
                     $stmtQtd->execute([$pedido_id]);
                     $quantidadeVendida = (int)$stmtQtd->fetchColumn();
 
-                    // 3. Captura o saldo residual que o cliente ja tinha acumulado
                     $stmtSaldo = $pdo->prepare("SELECT saldo_itens FROM clientes WHERE id = ?");
                     $stmtSaldo->execute([$cliente_id]);
                     $saldoAtual = (int)$stmtSaldo->fetchColumn();
 
-                    // 4. Executa a matematica exata de divisao e resto de fidelidade
                     $totalAcumulado = $saldoAtual + $quantidadeVendida;
-                    $bonusGerados = intdiv($totalAcumulado, 10); // A cada 10 vira 1 bonus inteiro
-                    $novoSaldoRestante = $totalAcumulado % 10;   // O resto continua na conta do cliente
+                    $bonusGerados = intdiv($totalAcumulado, 10); 
+                    $novoSaldoRestante = $totalAcumulado % 10;   
 
-                    // 5. Atualiza o saldo de itens do cliente de forma persistente
                     $stmtUpSaldo = $pdo->prepare("UPDATE clientes SET saldo_itens = ? WHERE id = ?");
                     $stmtUpSaldo->execute([$novoSaldoRestante, $cliente_id]);
 
-                    // 6. Injeta os registros de cupons de direito na tabela de bonus
                     if ($bonusGerados > 0) {
                         $stmtBonus = $pdo->prepare("INSERT INTO bonus (cliente_id, descricao) VALUES (?, ?)");
                         for ($i = 0; $i < $bonusGerados; $i++) {
@@ -63,7 +54,6 @@ if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
                 }
             }
 
-            // CORREÇÃO CRUCIAL: Salva as alterações fisicamente no banco antes de mandar o WhatsApp
             $pdo->commit();
 
             $stmtWhats = $pdo->prepare("
@@ -114,9 +104,7 @@ if (isset($_GET["alterar_status"]) && isset($_GET["novo_status"])) {
         }
     }
 }
-# =====================================
-# SELEÇÃO DOS PEDIDOS NA TABELA GERAL
-# =====================================
+
 $sqlPedidos = "
     SELECT p.id AS pedido_id, c.nome AS nome_cliente, p.data AS data_pedido, p.status AS status_pedido, SUM(pi.quantidade) AS total_produtos
     FROM pedidos p
@@ -192,21 +180,17 @@ $totalItensVendidos = array_sum(array_column($listaPedidos, 'total_produtos'));
 </head>
 <body>
 
-    <!-- Menu Lateral de Navegacao Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
         <ul>
-            <!-- Modulo de Clientes -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Clientes</li>
             <li><a href="http://localhost:8000/public/clientes.php">Gerenciar Clientes</a></li>
             <li><a href="http://localhost:8000/public/historico_cliente.php">Historico de Clientes</a></li>
             
-            <!-- Modulo de Produtos -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Produtos</li>
             <li><a href="http://localhost:8000/public/cadastrar_produto.php">Cadastrar Produto</a></li>
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
             
-            <!-- Modulo de Pedidos e Vendas -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Pedidos</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
             <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
@@ -215,21 +199,18 @@ $totalItensVendidos = array_sum(array_column($listaPedidos, 'total_produtos'));
         </ul>
     </nav>
 
-    <!-- Area de Conteudo Principal -->
     <main class="main-content">
         <div class="header">
             <h1>Controle de Encomendas</h1>
             <p>Monitore os pedidos e faca a gestao do fluxo de entrega de forma dinamica.</p>
         </div>
 
-        <!-- Alerta de Feedback Posicionado no Vao Central -->
         <?php if (!empty($mensagem)): ?>
             <div class="mensagem" style="margin-bottom: 25px; <?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
                 <?= htmlspecialchars($mensagem) ?>
             </div>
         <?php endif; ?>
 
-        <!-- Botao Dinamico para Notificacao de Alteracao de Status -->
         <?php if (!empty($linkWhatsAltera)): ?>
             <div style="margin-bottom: 30px;">
                 <a href="<?= $linkWhatsAltera ?>" target="_blank" class="btn btn-success-whats">
@@ -264,7 +245,6 @@ $totalItensVendidos = array_sum(array_column($listaPedidos, 'total_produtos'));
                 </a>
             </div>
 
-            <!-- Totalizadores Gerenciais Dinâmicos -->
             <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 180px; background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #3498db;">
                     <span style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 5px;">Pedidos Listados</span>

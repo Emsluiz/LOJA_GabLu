@@ -6,9 +6,6 @@ require_once __DIR__ . "/../config/database.php";
 $mensagem = "";
 $tipoMensagem = "sucesso";
 
-# =====================================
-# EDITAR CLIENTE
-# =====================================
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["salvar_edicao"])) {
     $id = (int) ($_POST["id"] ?? 0);
     $nome = trim($_POST["nome"] ?? "");
@@ -33,9 +30,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["salvar_edicao"])) {
     }
 }
 
-# =====================================
-# CADASTRAR CLIENTE
-# =====================================
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["cadastrar"])) {
     $nome = trim($_POST["nome"] ?? "");
     $telefone = trim($_POST["telefone"] ?? "");
@@ -64,9 +58,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["cadastrar"])) {
     }
 }
     
-# =====================================
-# EXCLUIR CLIENTE
-# =====================================
 if (isset($_GET["excluir"])) {
     $id = (int) $_GET["excluir"];
     if ($id > 0) {
@@ -89,9 +80,6 @@ if (isset($_GET["excluir"])) {
     }
 }
 
-# =====================================
-# MENSAGENS
-# =====================================
 if (isset($_GET["sucesso"])) {
     if ($_GET["sucesso"] === "cadastrado") $mensagem = "Cliente cadastrado com sucesso.";
     if ($_GET["sucesso"] === "editado") $mensagem = "Cliente atualizado com sucesso.";
@@ -114,9 +102,6 @@ if (isset($_GET["editar"])) {
     }
 }
 
-# =====================================
-# BUSCAR CLIENTES
-# =====================================
 $busca = trim($_GET["buscar"] ?? "");
 if ($busca !== "") {
     $sql = "SELECT * FROM clientes WHERE nome LIKE ? OR telefone LIKE ? OR cidade LIKE ? OR bairro LIKE ? ORDER BY id DESC";
@@ -175,7 +160,6 @@ if ($busca !== "") {
     </style>
 </head>
 <body>
-    <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
         <ul>

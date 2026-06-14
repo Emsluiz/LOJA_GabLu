@@ -1,5 +1,4 @@
 <?php
-// Inclui a trava de segurança. Quem não tiver e-mail e senha é redirecionado na hora
 require_once __DIR__ . "/../config/verificar_login.php";
 
 require_once __DIR__ . "/../config/database.php";
@@ -7,9 +6,6 @@ require_once __DIR__ . "/../config/database.php";
 $mensagem = "";
 $tipoMensagem = "sucesso";
 
-# =====================================
-# GATILHO: EXCLUIR PRODUTO DO CATÁLOGO
-# =====================================
 if (isset($_GET["excluir"])) {
     $id_excluir = (int)$_GET["excluir"];
     if ($id_excluir > 0) {
@@ -34,9 +30,6 @@ if (isset($_GET["excluir"])) {
     }
 }
 
-# =====================================
-# SELEÇÃO DOS PRODUTOS ATIVOS
-# =====================================
 $stmt = $pdo->query("SELECT * FROM produtos ORDER BY id DESC");
 $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?><!DOCTYPE html>
@@ -46,11 +39,9 @@ $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizar Produtos - Sistema Loja</title>
     <style>
-        /* CSS Base Unificado do Painel */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f4f6f9; color: #333; display: flex; overflow-x: hidden; max-width: 100%; }
         
-        /* Menu Lateral (Sidebar) */
         .sidebar { width: 250px; height: 100vh; background-color: #2c3e50; color: white; padding: 20px; position: fixed; }
         .sidebar h2 { text-align: center; margin-bottom: 30px; font-size: 22px; letter-spacing: 1px; }
         .sidebar ul { list-style: none; }
@@ -58,16 +49,13 @@ $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .sidebar ul li a { color: #ecf0f1; text-decoration: none; display: block; padding: 12px; border-radius: 5px; transition: 0.3s; }
         .sidebar ul li a:hover { background-color: #34495e; padding-left: 20px; }
         
-        /* Área de Conteúdo */
         .main-content { margin-left: 250px; padding: 40px; width: calc(100% - 250px); min-height: 100vh; }
         .header { margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; padding-bottom: 15px; }
         .header h1 { color: #2c3e50; }
         
-        /* Box da Tabela */
         .card-panel { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }
         .card-panel h3 { color: #2c3e50; margin-bottom: 20px; font-size: 20px; border-left: 4px solid #2ecc71; padding-left: 10px; }
         
-        /* Tabelas Estilizadas */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
         table th, table td { padding: 14px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 15px; }
         table th { background: #f8f9fa; color: #34495e; font-weight: 600; }
@@ -85,21 +73,17 @@ $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
 
-    <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
         <ul>
-            <!-- Modulo de Clientes -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Clientes</li>
             <li><a href="http://localhost:8000/public/clientes.php">Gerenciar Clientes</a></li>
             <li><a href="http://localhost:8000/public/historico_cliente.php">Historico de Clientes</a></li>
             
-            <!-- Modulo de Produtos -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Produtos</li>
             <li><a href="http://localhost:8000/public/cadastrar_produto.php">Cadastrar Produto</a></li>
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
             
-            <!-- Modulo de Pedidos e Vendas -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Pedidos</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
             <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
@@ -107,13 +91,11 @@ $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </ul>
     </nav>
 
-    <!-- Area de Conteudo Principal -->
     <div class="main-content">
         <div class="header">
             <h1>Catálogo de Produtos</h1>
         </div>
 
-        <!-- Exibição de Alertas Estilizados -->
         <?php if (!empty($mensagem)): ?>
             <div class="mensagem" style="margin-bottom: 30px; <?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
                 <?= htmlspecialchars($mensagem) ?>

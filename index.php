@@ -7,14 +7,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = trim($_POST["email"] ?? "");
     $senha = $_POST["senha"] ?? "";
 
-    // LOGIN FIXO BLINDADO: Não usa o banco de dados, entra direto!
     if ($email === "admin@loja.com" && $senha === "123") {
         
-        // Cria as credenciais na memória para a trava de segurança aceitar
         $_SESSION["usuario_id"] = 1;
         $_SESSION["usuario_email"] = "admin@loja.com";
 
-        // Redireciona na hora para a tela de clientes
         header("Location: public/clientes.php");
         exit;
     } else {
@@ -48,7 +45,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </head>
 <body>
 
-    <!-- Container do Cartão de Login Centralizado -->
     <div class="login-container">
         
         <div class="header">
@@ -56,7 +52,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <p>Entre com suas credenciais para acessar o sistema.</p>
         </div>
 
-        <!-- Alerta se houver erro de autenticação -->
         <?php if (!empty($erro)): ?>
             <div class="mensagem">
                 <?= htmlspecialchars($erro) ?>

@@ -1,5 +1,4 @@
 <?php
-// Inclui a trava de segurança. Quem não tiver e-mail e senha é redirecionado na hora
 require_once __DIR__ . "/../config/verificar_login.php";
 
 require_once __DIR__ . "/../config/database.php";
@@ -77,7 +76,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
             $mensagemTxt .= "\nObrigado pela preferência!";
 
-            // Geração do link direto e infalível com a barra corrigida
     $linkWhats = "https://wa.me" . trim($telefoneLimpo) . "?text=" . urlencode(trim($mensagemTxt));
             $msg = "Pedido gravado com sucesso no sistema.";
 
@@ -128,21 +126,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     </style>
 </head>
 <body>
-    <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
         <ul>
-            <!-- Modulo de Clientes -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Clientes</li>
             <li><a href="http://localhost:8000/public/clientes.php">Gerenciar Clientes</a></li>
             <li><a href="http://localhost:8000/public/historico_cliente.php">Historico de Clientes</a></li>
             
-            <!-- Modulo de Produtos -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Produtos</li>
             <li><a href="http://localhost:8000/public/cadastrar_produto.php">Cadastrar Produto</a></li>
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
             
-            <!-- Modulo de Pedidos e Vendas -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Pedidos</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
             <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
@@ -151,7 +145,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     </nav>
 
-    <!-- Área de Conteúdo Principal -->
     <main class="main-content">
         <div class="header">
             <h1>Registrar Vendas e Pedidos</h1>
@@ -170,7 +163,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
         <?php endif; ?>
 
-        <!-- Botão de Ação Direta para Disparo Nativo (Substituindo a dependência da API) -->
         <?php if (!empty($linkWhatsFinal)): ?>
             <div style="margin-bottom: 30px;">
                 <a href="<?= $linkWhatsFinal ?>" target="_blank" class="btn btn-success-whats">

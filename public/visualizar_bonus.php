@@ -29,9 +29,6 @@ if (isset($_GET["resgatar_bonus"]) && isset($_GET["cliente_id"])) {
     }
 }
 
-# =====================================
-# MENSAGENS (Idêntico ao fluxo de clientes)
-# =====================================
 if (isset($_GET["sucesso"])) {
     if ($_GET["sucesso"] === "resgatado") {
         $mensagem = "Bônus marcado como concluído com sucesso.";
@@ -43,9 +40,6 @@ if (isset($_GET["sucesso"])) {
     }
 }
 
-# =====================================
-# BUSCAR LISTA DE BÔNUS ATIVOS
-# =====================================
 $sql = "
     SELECT b.id AS bonus_id, b.descricao, b.data AS data_gerado, c.nome AS nome_cliente, c.id AS cliente_id, c.telefone 
     FROM bonus b 
@@ -94,21 +88,17 @@ $listaBonus = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
 
-    <!-- Menu Lateral de Navegação Unificado -->
     <nav class="sidebar">
         <h2>Gerenciamento</h2>
         <ul>
-            <!-- Modulo de Clientes -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Clientes</li>
             <li><a href="http://localhost:8000/public/clientes.php">Gerenciar Clientes</a></li>
             <li><a href="http://localhost:8000/public/historico_cliente.php">Historico de Clientes</a></li>
             
-            <!-- Modulo de Produtos -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Produtos</li>
             <li><a href="http://localhost:8000/public/cadastrar_produto.php">Cadastrar Produto</a></li>
             <li><a href="http://localhost:8000/public/visualizar_produtos.php">Visualizar Produtos</a></li>
             
-            <!-- Modulo de Pedidos e Vendas -->
             <li style="padding-top: 10px; font-weight: bold; color: #a6b8c7; font-size: 12px; text-transform: uppercase; list-style: none; margin-bottom: 5px;">Pedidos</li>
             <li><a href="http://localhost:8000/public/criar_pedido.php">Criar Pedido</a></li>
             <li><a href="http://localhost:8000/public/visualizar_pedidos.php">Visualizar Pedidos</a></li>
@@ -116,13 +106,11 @@ $listaBonus = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
         </ul>
     </nav>
 
-     <!-- Area de Conteudo Principal -->
     <div class="main-content">
         <div class="header">
             <h1>Gerenciamento de Bônus</h1>
         </div>
 
-        <!-- Alerta de Feedback (Idêntico ao estilo do gerenciar clientes) -->
         <?php if (!empty($mensagem)): ?>
             <div class="mensagem" style="margin-bottom: 30px; <?= $tipoMensagem === 'erro' ? 'background: #f8d7da; color: #721c24; border-left-color: #dc3545;' : '' ?>">
                 <?= htmlspecialchars($mensagem) ?>
@@ -136,10 +124,8 @@ $listaBonus = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     <?php foreach ($listaBonus as $bonus): ?>
                         <?php 
-                            // MONTAGEM BLINDADA: Junta o endereço oficial com a barra e o número limpo
                             $telefoneLimpo = preg_replace('/[^0-9]/', '', $bonus['telefone'] ?? '');
                             
-                            // Texto oficial limpo e personalizado sem emojis para o cliente
                             $msgWhats = " *BÔNUS FIDELIDADE DISPONÍVEL!* \n\nOlá " . trim($bonus['nome_cliente']) . "!\n\nÓtima notícia: você completou a sua meta de compras e acaba de ganhar um prêmio exclusivo do nosso sistema de fidelidade!\n\nO seu cupom (*" . trim($bonus['descricao']) . "*) já está liberado. Pode passar aqui para retirar o seu prêmio quando quiser!\n\nTe aguardamos com muito carinho!";
                             
                             $urlWhatsFixa = "https://wa.me/" . $telefoneLimpo . "?text=" . urlencode($msgWhats);
@@ -152,10 +138,8 @@ $listaBonus = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
                             </div>
                             
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                <!-- Botão do WhatsApp corrigido puxando a URL com a barra explícita -->
                                 <a class="btn-resgate" style="background-color: #3498db; display: inline-block;" target="_blank" href="<?= $urlWhatsFixa ?>">WhatsApp</a>
                                 
-                                <!-- Botão Verde aplicando o redirecionamento com arquivo explícito -->
                                 <a href="visualizar_bonus.php?cliente_id=<?= $bonus['cliente_id'] ?>&resgatar_bonus=<?= $bonus['bonus_id'] ?>" 
                                    class="btn-resgate" 
                                    onclick="return confirm('Confirmar a entrega do prêmio para <?= htmlspecialchars($bonus['nome_cliente']) ?> e dar baixa definitiva neste cupom de bônus?')">
@@ -166,7 +150,6 @@ $listaBonus = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <!-- Estado Vazio Inteligente -->
                 <div class="sem-dados">
                     <strong>Nenhum bônus pendente de entrega.</strong>
                     <p style="font-size: 14px; margin-top: 5px; color: #95a5a6; font-style: normal;">Todos os cupons gerados automaticamente pelo sistema de fidelidade já foram devidamente resgatados e entregues aos clientes.</p>
