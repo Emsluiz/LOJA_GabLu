@@ -271,11 +271,24 @@ $totalItensVendidos = array_sum(array_column($listaPedidos, 'total_produtos'));
                 <tbody>
                     <?php if (is_array($listaPedidos) && !empty($listaPedidos)): ?>
                         <?php foreach ($listaPedidos as $p): ?>
+                            <?php
+                            // BUSCA CIRÚRGICA: Busca os nomes dos produtos deste pedido direto aqui, sem mexer no topo
+                            $stmtItensTabela = $pdo->prepare("
+                                SELECT GROUP_CONCAT(CONCAT(pi.quantidade, 'x ', pr.nome) SEPARATOR ', ') AS produtos_texto
+                                FROM pedido_itens pi
+                                JOIN produtos pr ON pi.produto_id = pr.id
+                                WHERE pi.pedido_id = ?
+                            ");
+                            $stmtItensTabela->execute([$p["pedido_id"]]);
+                            $nomesProdutos = $stmtItensTabela->fetchColumn();
+                            ?>
                             <tr>
                                 <td><strong>#<?= $p["pedido_id"] ?></strong></td>
                                 <td><?= htmlspecialchars($p["nome_cliente"] ?? "") ?></td>
                                 <td><?= !empty($p["data_pedido"]) ? date('d/m/Y H:i', strtotime($p["data_pedido"])) : '<span style="color:#bbb;">Não salva</span>' ?></td>
-                                <td><?= (int)$p["total_produtos"] ?> un.</td>
+                                
+                                <td><?= (int)$p["total_produtos"] ?> un. (<?= htmlspecialchars($nomesProdutos ? $nomesProdutos : "Sem descrição") ?>)</td>
+                                
                                 <td>
                                     <?php $classeStatus = str_replace(' ', '-', $p["status_pedido"]); ?>
                                     <span class="badge-status status-<?= $classeStatus ?>">
